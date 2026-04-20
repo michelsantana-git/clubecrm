@@ -13,6 +13,19 @@ const rowSchema = z.object({
   source: z.string().optional().default("Importação CSV"),
 });
 
+type LeadInsert = {
+  project_id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  company: string | null;
+  tags: string[];
+  score: number;
+  stage: string;
+  source: string;
+  newsletter_subscribed: boolean;
+};
+
 export async function POST(req: NextRequest) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -24,24 +37,25 @@ export async function POST(req: NextRequest) {
   if (!project_id || !Array.isArray(rows) || rows.length === 0)
     return NextResponse.json({ error: "project_id e rows obrigatórios" }, { status: 400 });
 
-  // Validar e transformar cada linha
-  const leads: any[] = [];
+  const leads: LeadInsert[] = [];
   const errors: string[] = [];
 
-  rows.forEach((row: any, i: number) => {
+  rows.forEach((row: unknown, i: number) => {
     const parsed = rowSchema.safeParse(row);
     if (!parsed.success) {
-      errors.push(`Linha ${i + 2}: ${Object.values(parsed.error.flatten().fieldErrors).flat().join(", ")}`);
+      errors.push(
+        `Linha ${i + 2}: ${Object.values(parsed.error.flatten().fieldErrors).flat().join(", ")}`
+      );
       return;
     }
     const d = parsed.data;
     leads.push({
-      project_id,
+      project_id: project_id as string,
       name: d.name,
       email: d.email,
       phone: d.phone || null,
       company: d.company || null,
-      tags: d.tags ? d.tags.split(";").map((t: string) => t.trim()).filter(Boolean) : [],
+      tags: d.tags ? d.tags.split(";").map((t) => t.trim()).filter(Boolean) : [],
       score: d.score,
       stage: d.stage,
       source: d.source,
@@ -50,14 +64,24 @@ export async function POST(req: NextRequest) {
   });
 
   if (leads.length === 0)
-    return NextResponse.json({ error: "Nenhum lead válido encontrado.", details: errors }, { status: 400 });
+    return NextResponse.json(
+      { error: "Nenhum lead válido encontrado.", details: errors },
+      { status: 400 }
+    );
 
-  const { data, error } = await supabase.from("leads").insert(leads).select("id");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.from("leads") as any)
+    .insert(leads)
+    .select("id");
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({
-    imported: data?.length ?? 0,
-    skipped: errors.length,
-    errors: errors.slice(0, 10), // max 10 erros retornados
-  }, { status: 201 });
+  return NextResponse.json(
+    {
+      imported: (data as { id: string }[])?.length ?? 0,
+      skipped: errors.length,
+      errors: errors.slice(0, 10),
+    },
+    { status: 201 }
+  );
 }
