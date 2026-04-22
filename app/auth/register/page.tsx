@@ -24,12 +24,13 @@ const getStrengthScore = (p: string) => {
   let s = 0;
   if (p.length >= 8) s++;
   if (/[A-Z]/.test(p)) s++;
+  if (/[a-z]/.test(p)) s++; // Adicionado minúscula
   if (/[0-9]/.test(p)) s++;
   if (/[^A-Za-z0-9]/.test(p)) s++;
   return s;
 };
-const strengthLabel = ["","Muito fraca","Fraca","Razoável","Forte"];
-const strengthColor = ["#e4e8f0","#d42e2e","#e07020","#c47f00","#0a9e6e"];
+const strengthLabel = ["","Muito fraca","Fraca","Razoável","Boa","Forte"];
+const strengthColor = ["#e4e8f0","#d42e2e","#e07020","#c47f00","#88b04b","#0a9e6e"];
 
 export default function RegisterPage() {
   const router  = useRouter();
@@ -50,7 +51,17 @@ export default function RegisterPage() {
     if (!name.trim() || name.trim().length < 2) return "Nome deve ter pelo menos 2 caracteres.";
     if (!email || !/\S+@\S+\.\S+/.test(email))  return "E-mail inválido.";
     if (!password || password.length < 8)         return "Senha deve ter pelo menos 8 caracteres.";
-    if (score < 2)                                return "Senha muito fraca. Use letras maiúsculas, números ou símbolos.";
+    
+    // Validação rigorosa para bater com a política do Supabase
+    const hasUpper = /[A-Z]/.test(password);
+    const hasLower = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecial = /[^A-Za-z0-9]/.test(password);
+
+    if (!hasUpper || !hasLower || !hasNumber || !hasSpecial) {
+      return "A senha deve conter letras maiúsculas, minúsculas, números e caracteres especiais.";
+    }
+
     if (password !== confirm)                     return "As senhas não coincidem.";
     return null;
   };
@@ -61,27 +72,32 @@ export default function RegisterPage() {
     if (validationError) { setError(validationError); return; }
     setError(null); setLoading(true);
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { name: name.trim() },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name: name.trim() },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
 
-    if (error) {
-      if (error.message.includes("already registered")) {
-        setError("Este e-mail já está cadastrado. Tente fazer login ou recuperar a senha.");
-      } else {
-        setError("Erro ao criar conta: " + error.message);
+      if (error) {
+        if (error.message.includes("already registered")) {
+          setError("Este e-mail já está cadastrado. Tente fazer login ou recuperar a senha.");
+        } else {
+          setError("Erro ao criar conta: " + error.message);
+        }
+        setLoading(false);
+        return;
       }
-      setLoading(false);
-      return;
-    }
 
-    setSent(true);
-    setLoading(false);
+      setSent(true);
+    } catch (err: any) {
+      setError("Ocorreu um erro inesperado: " + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const inputStyle = (field: string) => ({
@@ -171,19 +187,20 @@ export default function RegisterPage() {
           {password.length > 0 && (
             <div style={{ marginBottom:16 }}>
               <div style={{ display:"flex", gap:4, marginBottom:5 }}>
-                {[1,2,3,4].map(i => (
+                {[1,2,3,4,5].map(i => (
                   <div key={i} style={{ flex:1, height:3, borderRadius:99, background: i <= score ? strengthColor[score] : "#e4e8f0", transition:"background 0.3s" }} />
                 ))}
               </div>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                 <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
                   {[
-                    { ok: password.length >= 8, label: "8+ caracteres" },
-                    { ok: /[A-Z]/.test(password), label: "Maiúscula" },
+                    { ok: password.length >= 8, label: "8+ carac." },
+                    { ok: /[A-Z]/.test(password), label: "Maiúsc." },
+                    { ok: /[a-z]/.test(password), label: "Minúsc." },
                     { ok: /[0-9]/.test(password), label: "Número" },
                     { ok: /[^A-Za-z0-9]/.test(password), label: "Símbolo" },
                   ].map(r => (
-                    <span key={r.label} style={{ fontSize:11, color: r.ok ? "#0a9e6e" : "#6b7f99", fontWeight: r.ok ? 700 : 400 }}>
+                    <span key={r.label} style={{ fontSize:10, color: r.ok ? "#0a9e6e" : "#6b7f99", fontWeight: r.ok ? 700 : 400 }}>
                       {r.ok ? "✓ " : "○ "}{r.label}
                     </span>
                   ))}
