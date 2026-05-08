@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
@@ -11,33 +11,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(new URL("/auth/login?error=missing_fields", origin), { status: 303 });
   }
 
-  // Criar resposta de redirect para o dashboard
-  const successResponse = NextResponse.redirect(new URL("/dashboard", origin), { status: 303 });
-  const errorResponse = (code: string) =>
-    NextResponse.redirect(new URL(`/auth/login?error=${code}`, origin), { status: 303 });
-
-  const supabase = createServerClient(
+  // Usar o cliente simples para autenticar
+  const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          // Setar cookies na resposta de sucesso
-          cookiesToSet.forEach(({ name, value, options }) => {
-            successResponse.cookies.set(name, value, {
-              ...options,
-              sameSite: "lax",
-              httpOnly: true,
-              secure: true,
-              path: "/",
-            });
-          });
-        },
-      },
-    }
+    { auth: { persistSession: false } }
   );
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -48,12 +26,34 @@ export async function POST(request: NextRequest) {
       : error.message.includes("Email not confirmed")
       ? "email_not_confirmed"
       : encodeURIComponent(error.message);
-    return errorResponse(code);
+    return NextResponse.redirect(new URL(`/auth/login?error=${code}`, origin), { status: 303 });
   }
 
   if (!data.session) {
-    return errorResponse("no_session");
+    return NextResponse.redirect(new URL("/auth/login?error=no_session", origin), { status: 303 });
   }
 
-  return successResponse;
+  const { access_token, refresh_token, expires_in } = data.session;
+
+  // Nome exato do cookie que o middleware verifica
+  const cookieName = `sb-btkhntalnjfwdqkioeoi-auth-token`;
+  const cookieValue = JSON.stringify({
+    access_token,
+    refresh_token,
+    expires_in,
+    token_type: "bearer",
+    user: data.user,
+  });
+
+  const response = NextResponse.redirect(new URL("/dashboard", origin), { status: 303 });
+
+  response.cookies.set(cookieName, cookieValue, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    maxAge: expires_in,
+    path: "/",
+  });
+
+  return response;
 }
