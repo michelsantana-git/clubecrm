@@ -23,9 +23,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const sessionCookie = request.cookies.get('sb-btkhntalnjfwdqkioeoi-auth-token');
+  // Verificar qualquer cookie que comece com sb- (supabase)
+  const allCookies = request.cookies.getAll();
+  const hasSupabaseCookie = allCookies.some(c => c.name.startsWith('sb-'));
 
-  if (!sessionCookie?.value) {
+  if (!hasSupabaseCookie) {
     return NextResponse.redirect(new URL('/auth/login', request.url));
   }
 
@@ -33,5 +35,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)', ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };
