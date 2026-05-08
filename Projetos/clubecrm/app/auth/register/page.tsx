@@ -27,9 +27,9 @@ export default function RegisterPage() {
     e.preventDefault();
     setError(null);
     if (!name.trim() || name.trim().length < 2) { setError("Nome deve ter pelo menos 2 caracteres."); return; }
-    if (!email || !/\S+@\S+\.\S+/.test(email)) { setError("E-mail inválido."); return; }
+    if (!email || !/\S+@\S+\.\S+/.test(email)) { setError("E-mail invalido."); return; }
     if (password.length < 6) { setError("A senha deve ter pelo menos 6 caracteres."); return; }
-    if (password !== confirm) { setError("As senhas não coincidem."); return; }
+    if (password !== confirm) { setError("As senhas nao coincidem."); return; }
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({
       email: email.trim().toLowerCase(),
@@ -39,7 +39,62 @@ export default function RegisterPage() {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
-    if (error) { setError(`Erro: ${error.message}`); setLoading(false); return; }
+    if (error) {
+      setError(`Erro Supabase: ${error.message} | status: ${error.status}`);
+      setLoading(false);
+      return;
+    }
+    if (data.user && !data.session) { setSent(true); }
+    else if (data.session) { window.location.href = "/dashboard"; }
+    setLoading(fals
+
+cat > app/auth/register/page.tsx << 'EOF'
+"use client";
+import { useState } from "react";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+
+const S = {
+  wrap:  { minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"linear-gradient(135deg,#eef2ff 0%,#f5f6fa 50%,#e8f4ff 100%)", fontFamily:"'DM Sans','Segoe UI',sans-serif", padding:"24px 16px" } as React.CSSProperties,
+  card:  { width:"100%", maxWidth:440, background:"#ffffff", borderRadius:20, padding:"36px 40px", boxShadow:"0 8px 40px rgba(0,0,0,0.10)", border:"1px solid #e4e8f0" } as React.CSSProperties,
+  label: { fontSize:12, fontWeight:700, color:"#3d5570", display:"block", marginBottom:6 } as React.CSSProperties,
+  input: { width:"100%", background:"#f5f6fa", border:"1.5px solid #e4e8f0", borderRadius:10, color:"#0d1b2e", padding:"12px 14px", fontSize:14, outline:"none", boxSizing:"border-box", fontFamily:"inherit" } as React.CSSProperties,
+  btn:   { width:"100%", padding:"13px", background:"#1d6aff", color:"#fff", border:"none", borderRadius:10, fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit" } as React.CSSProperties,
+  err:   { padding:"12px 14px", background:"#d42e2e10", border:"1px solid #d42e2e30", borderRadius:10, color:"#d42e2e", fontSize:13, marginBottom:16, lineHeight:1.6 } as React.CSSProperties,
+  ok:    { padding:"12px 14px", background:"#0a9e6e12", border:"1px solid #0a9e6e30", borderRadius:10, color:"#0a9e6e", fontSize:13, marginBottom:16, lineHeight:1.6 } as React.CSSProperties,
+};
+
+export default function RegisterPage() {
+  const supabase = createClient();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!name.trim() || name.trim().length < 2) { setError("Nome deve ter pelo menos 2 caracteres."); return; }
+    if (!email || !/\S+@\S+\.\S+/.test(email)) { setError("E-mail invalido."); return; }
+    if (password.length < 6) { setError("A senha deve ter pelo menos 6 caracteres."); return; }
+    if (password !== confirm) { setError("As senhas nao coincidem."); return; }
+    setLoading(true);
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim().toLowerCase(),
+      password,
+      options: {
+        data: { name: name.trim() },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    if (error) {
+      setError(`Erro Supabase: ${error.message} | status: ${error.status}`);
+      setLoading(false);
+      return;
+    }
     if (data.user && !data.session) { setSent(true); }
     else if (data.session) { window.location.href = "/dashboard"; }
     setLoading(false);
@@ -51,10 +106,10 @@ export default function RegisterPage() {
         <div style={{ textAlign:"center" }}>
           <div style={{ width:70, height:70, borderRadius:"50%", background:"#0a9e6e12", border:"2px solid #0a9e6e30", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 20px", fontSize:32 }}>✉</div>
           <h1 style={{ fontSize:22, fontWeight:900, color:"#0d1b2e", margin:"0 0 10px" }}>Confirme seu e-mail</h1>
-          <p style={{ fontSize:14, color:"#6b7f99", lineHeight:1.6, margin:"0 0 6px" }}>Enviamos um link de confirmação para</p>
+          <p style={{ fontSize:14, color:"#6b7f99", lineHeight:1.6, margin:"0 0 6px" }}>Enviamos um link de confirmacao para</p>
           <p style={{ fontSize:14, fontWeight:700, color:"#0d1b2e", margin:"0 0 22px", fontFamily:"monospace" }}>{email}</p>
-          <div style={S.ok}>Clique no link do e-mail para ativar sua conta. Verifique também a pasta de spam.</div>
-          <Link href="/auth/login" style={{ display:"block", padding:"12px", background:"transparent", color:"#1d6aff", border:"1.5px solid #e4e8f0", borderRadius:10, fontSize:14, fontWeight:700, textDecoration:"none", textAlign:"center" }}>← Voltar para o login</Link>
+          <div style={S.ok}>Clique no link do e-mail para ativar sua conta. Verifique tambem a pasta de spam.</div>
+          <Link href="/auth/login" style={{ display:"block", padding:"12px", background:"transparent", color:"#1d6aff", border:"1.5px solid #e4e8f0", borderRadius:10, fontSize:14, fontWeight:700, textDecoration:"none", textAlign:"center" }}>Voltar para o login</Link>
         </div>
       </div>
     </main>
@@ -69,13 +124,13 @@ export default function RegisterPage() {
         </div>
         <div style={{ textAlign:"center", marginBottom:24 }}>
           <h1 style={{ fontSize:22, fontWeight:900, color:"#0d1b2e", margin:"0 0 5px" }}>Criar sua conta</h1>
-          <p style={{ fontSize:13, color:"#6b7f99", margin:0 }}>Comece gratuitamente, sem cartão de crédito</p>
+          <p style={{ fontSize:13, color:"#6b7f99", margin:0 }}>Comece gratuitamente, sem cartao de credito</p>
         </div>
         {error && <div style={S.err}>{error}</div>}
         <form onSubmit={handleRegister}>
           <div style={{ marginBottom:14 }}>
             <label style={S.label}>Nome completo *</label>
-            <input type="text" value={name} placeholder="João Silva" required autoFocus onChange={e => { setName(e.target.value); setError(null); }} style={S.input} />
+            <input type="text" value={name} placeholder="Joao Silva" required autoFocus onChange={e => { setName(e.target.value); setError(null); }} style={S.input} />
           </div>
           <div style={{ marginBottom:14 }}>
             <label style={S.label}>E-mail *</label>
@@ -83,15 +138,15 @@ export default function RegisterPage() {
           </div>
           <div style={{ marginBottom:14 }}>
             <label style={S.label}>Senha *</label>
-            <input type="password" value={password} placeholder="Mínimo 6 caracteres" required onChange={e => { setPassword(e.target.value); setError(null); }} style={S.input} />
+            <input type="password" value={password} placeholder="Minimo 6 caracteres" required onChange={e => { setPassword(e.target.value); setError(null); }} style={S.input} />
           </div>
           <div style={{ marginBottom:22 }}>
             <label style={S.label}>Confirmar senha *</label>
             <input type="password" value={confirm} placeholder="Repita a senha" required onChange={e => { setConfirm(e.target.value); setError(null); }} style={{ ...S.input, borderColor: confirm && confirm !== password ? "#d42e2e" : "#e4e8f0" }} />
-            {confirm && confirm !== password && <div style={{ fontSize:12, color:"#d42e2e", marginTop:5 }}>As senhas não coincidem</div>}
+            {confirm && confirm !== password && <div style={{ fontSize:12, color:"#d42e2e", marginTop:5 }}>As senhas nao coincidem</div>}
           </div>
           <button type="submit" disabled={loading} style={{ ...S.btn, opacity:loading?0.7:1, cursor:loading?"not-allowed":"pointer" }}>
-            {loading ? "Criando conta…" : "Criar conta"}
+            {loading ? "Criando conta..." : "Criar conta"}
           </button>
         </form>
         <div style={{ display:"flex", alignItems:"center", gap:12, margin:"20px 0" }}>
@@ -100,7 +155,7 @@ export default function RegisterPage() {
           <div style={{ flex:1, height:1, background:"#e4e8f0" }} />
         </div>
         <div style={{ textAlign:"center", fontSize:14, color:"#6b7f99" }}>
-          Já tem conta?{" "}
+          Ja tem conta?{" "}
           <Link href="/auth/login" style={{ color:"#1d6aff", fontWeight:700, textDecoration:"none" }}>Fazer login</Link>
         </div>
       </div>
