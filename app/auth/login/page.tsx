@@ -29,12 +29,11 @@ function LoginForm() {
         <div style={S.err}>
           {errorParam === "invalid_credentials" ? "E-mail ou senha incorretos." :
            errorParam === "email_not_confirmed" ? "Confirme seu e-mail antes de entrar." :
-           errorParam === "env_missing" ? "Erro de configuracao do servidor." :
            errorParam === "no_session" ? "Sessao nao criada. Tente novamente." :
            `Erro: ${decodeURIComponent(errorParam)}`}
         </div>
       )}
-      <form action="/api/signin" method="POST">
+      <form action="/api/entrar" method="POST">
         <div style={{ marginBottom:16 }}>
           <label style={S.label}>E-mail</label>
           <input type="email" name="email" placeholder="seu@email.com" required autoFocus style={S.input} />
