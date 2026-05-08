@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 
 const PUBLIC_PATHS = [
   "/auth/login",
-  "/auth/register", 
+  "/auth/register",
   "/auth/forgot-password",
   "/auth/reset-password",
   "/auth/callback",
@@ -14,7 +14,6 @@ const PUBLIC_PATHS = [
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Sempre liberar assets e rotas públicas
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
@@ -24,13 +23,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Verificar cookie de sessão do Supabase
-  const allCookies = request.cookies.getAll();
-  const hasSession = allCookies.some(c => 
-    c.name.startsWith("sb-") && c.name.endsWith("-auth-token")
-  );
+  // Verificar cookie exato do Supabase
+  const sessionCookie = request.cookies.get("sb-btkhntalnjfwdqkioeoi-auth-token");
 
-  if (!hasSession) {
+  if (!sessionCookie) {
     return NextResponse.redirect(new URL("/auth/login", request.url));
   }
 
