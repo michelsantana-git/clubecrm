@@ -7,11 +7,19 @@ export async function POST(request: NextRequest) {
   const password = formData.get("password") as string;
   const origin   = request.nextUrl.origin;
 
+  const redirect = (path: string) =>
+    new NextResponse(
+      `<!DOCTYPE html><html><head>
+        <meta http-equiv="refresh" content="0;url=${origin}${path}">
+      </head><body></body></html>`,
+      { status: 200, headers: { "Content-Type": "text/html" } }
+    );
+
   if (!email || !password) {
-    return NextResponse.redirect(`${origin}/auth/login?error=missing_fields`, { status: 303 });
+    return redirect("/auth/login?error=missing_fields");
   }
 
-  const response = NextResponse.redirect(`${origin}/dashboard`, { status: 303 });
+  const cookieHeader: string[] = [];
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,9 +28,17 @@ export async function POST(request: NextRequest) {
       cookies: {
         getAll() { return request.cookies.getAll(); },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          );
+          cookiesToSet.forEach(({ name, value, options }) => {
+            const opts = [
+              `${name}=${value}`,
+              "Path=/",
+              options?.maxAge ? `Max-Age=${options.maxAge}` : "",
+              options?.sameSite ? `SameSite=${options.sameSite}` : "SameSite=Lax",
+              options?.secure ? "Secure" : "",
+              options?.httpOnly ? "HttpOnly" : "",
+            ].filter(Boolean).join("; ");
+            cookieHeader.push(opts);
+          });
         },
       },
     }
@@ -36,12 +52,14 @@ export async function POST(request: NextRequest) {
       : error.message.includes("Email not confirmed")
       ? "email_not_confirmed"
       : encodeURIComponent(error.message);
-    return NextResponse.redirect(`${origin}/auth/login?error=${code}`, { status: 303 });
+    return redirect(`/auth/login?error=${code}`);
   }
 
   if (!data.session) {
-    return NextResponse.redirect(`${origin}/auth/login?error=no_session`, { status: 303 });
+    return redirect("/auth/login?error=no_session");
   }
 
+  const response = redirect("/dashboard");
+  cookieHeader.forEach(c => response.headers.append("Set-Cookie", c));
   return response;
 }
