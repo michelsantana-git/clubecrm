@@ -32,7 +32,7 @@ function LoginForm() {
     }
     const msg = searchParams.get("message");
     if (msg === "senha_alterada") {
-      setInfo("Senha alterada com sucesso! Faca login com a nova senha.");
+      setInfo("Senha alterada! Faca login com a nova senha.");
     }
   }, [searchParams]);
 
@@ -41,7 +41,10 @@ function LoginForm() {
     if (!email || !password) { setError("Preencha e-mail e senha."); return; }
     setError(null); setInfo(null); setLoading(true);
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
+    });
 
     if (error) {
       if (error.message === "Invalid login credentials") {
@@ -55,12 +58,12 @@ function LoginForm() {
       return;
     }
 
-    // Usar window.location para garantir que os cookies de sessão sejam gravados
-    // antes do middleware verificar a autenticação
     if (data.session) {
+      // window.location forca reload completo garantindo que
+      // os cookies de sessao sejam lidos pelo middleware
       window.location.href = "/dashboard";
     } else {
-      setError("Sessao nao criada. Tente novamente.");
+      setError("Sessao nao iniciada. Tente novamente.");
       setLoading(false);
     }
   };
@@ -91,7 +94,8 @@ function LoginForm() {
         <div style={{ marginBottom:8 }}>
           <label style={S.label}>Senha</label>
           <div style={{ position:"relative" }}>
-            <input type={showPw ? "text" : "password"} value={password} placeholder="Sua senha" required
+            <input type={showPw ? "text" : "password"} value={password}
+              placeholder="Sua senha" required
               onChange={e => { setPassword(e.target.value); setError(null); }}
               style={{ ...S.input, paddingRight:56 }} />
             <button type="button" onClick={() => setShowPw(s => !s)}
@@ -102,7 +106,8 @@ function LoginForm() {
         </div>
 
         <div style={{ textAlign:"right", marginBottom:22 }}>
-          <Link href="/auth/forgot-password" style={{ fontSize:13, color:"#1d6aff", fontWeight:600, textDecoration:"none" }}>
+          <Link href="/auth/forgot-password"
+            style={{ fontSize:13, color:"#1d6aff", fontWeight:600, textDecoration:"none" }}>
             Esqueci minha senha
           </Link>
         </div>
@@ -121,7 +126,8 @@ function LoginForm() {
 
       <div style={{ textAlign:"center", fontSize:14, color:"#6b7f99" }}>
         Nao tem conta?{" "}
-        <Link href="/auth/register" style={{ color:"#1d6aff", fontWeight:700, textDecoration:"none" }}>
+        <Link href="/auth/register"
+          style={{ color:"#1d6aff", fontWeight:700, textDecoration:"none" }}>
           Criar conta gratis
         </Link>
       </div>
@@ -132,7 +138,9 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <main style={S.wrap}>
-      <Suspense fallback={<div style={{ color:"#6b7f99", fontSize:14 }}>Carregando...</div>}>
+      <Suspense fallback={
+        <div style={{ color:"#6b7f99", fontSize:14 }}>Carregando...</div>
+      }>
         <LoginForm />
       </Suspense>
     </main>
