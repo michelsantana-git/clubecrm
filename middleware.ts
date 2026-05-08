@@ -23,11 +23,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Verificar qualquer cookie que comece com sb- (supabase)
-  const allCookies = request.cookies.getAll();
-  const hasSupabaseCookie = allCookies.some(c => c.name.startsWith('sb-'));
+  const sessionCookie = request.cookies.get('sb-session');
 
-  if (!hasSupabaseCookie) {
+  if (!sessionCookie?.value) {
     return NextResponse.redirect(new URL('/auth/login', request.url));
   }
 
