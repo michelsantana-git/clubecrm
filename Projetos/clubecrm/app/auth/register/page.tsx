@@ -40,7 +40,7 @@ export default function RegisterPage() {
       },
     });
     if (error) {
-      setError(`Erro Supabase: ${error.message} | status: ${error.status}`);
+      setError("ERRO_SUPABASE: " + error.message + " | STATUS: " + error.status);
       setLoading(false);
       return;
     }
@@ -53,11 +53,11 @@ export default function RegisterPage() {
     <main style={S.wrap}>
       <div style={S.card}>
         <div style={{ textAlign:"center" }}>
-          <div style={{ width:70, height:70, borderRadius:"50%", background:"#0a9e6e12", border:"2px solid #0a9e6e30", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 20px", fontSize:32 }}>✉</div>
+          <div style={{ width:70, height:70, borderRadius:"50%", background:"#0a9e6e12", border:"2px solid #0a9e6e30", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 20px", fontSize:32 }}>ok</div>
           <h1 style={{ fontSize:22, fontWeight:900, color:"#0d1b2e", margin:"0 0 10px" }}>Confirme seu e-mail</h1>
-          <p style={{ fontSize:14, color:"#6b7f99", lineHeight:1.6, margin:"0 0 6px" }}>Enviamos um link de confirmacao para</p>
+          <p style={{ fontSize:14, color:"#6b7f99", lineHeight:1.6, margin:"0 0 6px" }}>Enviamos um link para</p>
           <p style={{ fontSize:14, fontWeight:700, color:"#0d1b2e", margin:"0 0 22px", fontFamily:"monospace" }}>{email}</p>
-          <div style={S.ok}>Clique no link do e-mail para ativar sua conta. Verifique tambem a pasta de spam.</div>
+          <div style={S.ok}>Clique no link para ativar sua conta.</div>
           <Link href="/auth/login" style={{ display:"block", padding:"12px", background:"transparent", color:"#1d6aff", border:"1.5px solid #e4e8f0", borderRadius:10, fontSize:14, fontWeight:700, textDecoration:"none", textAlign:"center" }}>Voltar para o login</Link>
         </div>
       </div>
@@ -73,37 +73,32 @@ export default function RegisterPage() {
         </div>
         <div style={{ textAlign:"center", marginBottom:24 }}>
           <h1 style={{ fontSize:22, fontWeight:900, color:"#0d1b2e", margin:"0 0 5px" }}>Criar sua conta</h1>
-          <p style={{ fontSize:13, color:"#6b7f99", margin:0 }}>Comece gratuitamente, sem cartao de credito</p>
+          <p style={{ fontSize:13, color:"#6b7f99", margin:0 }}>Comece gratuitamente</p>
         </div>
         {error && <div style={S.err}>{error}</div>}
         <form onSubmit={handleRegister}>
           <div style={{ marginBottom:14 }}>
-            <label style={S.label}>Nome completo *</label>
+            <label style={S.label}>Nome completo</label>
             <input type="text" value={name} placeholder="Joao Silva" required autoFocus onChange={e => { setName(e.target.value); setError(null); }} style={S.input} />
           </div>
           <div style={{ marginBottom:14 }}>
-            <label style={S.label}>E-mail *</label>
+            <label style={S.label}>E-mail</label>
             <input type="email" value={email} placeholder="seu@email.com" required onChange={e => { setEmail(e.target.value); setError(null); }} style={S.input} />
           </div>
           <div style={{ marginBottom:14 }}>
-            <label style={S.label}>Senha *</label>
+            <label style={S.label}>Senha</label>
             <input type="password" value={password} placeholder="Minimo 6 caracteres" required onChange={e => { setPassword(e.target.value); setError(null); }} style={S.input} />
           </div>
           <div style={{ marginBottom:22 }}>
-            <label style={S.label}>Confirmar senha *</label>
+            <label style={S.label}>Confirmar senha</label>
             <input type="password" value={confirm} placeholder="Repita a senha" required onChange={e => { setConfirm(e.target.value); setError(null); }} style={{ ...S.input, borderColor: confirm && confirm !== password ? "#d42e2e" : "#e4e8f0" }} />
             {confirm && confirm !== password && <div style={{ fontSize:12, color:"#d42e2e", marginTop:5 }}>As senhas nao coincidem</div>}
           </div>
           <button type="submit" disabled={loading} style={{ ...S.btn, opacity:loading?0.7:1, cursor:loading?"not-allowed":"pointer" }}>
-            {loading ? "Criando conta..." : "Criar conta"}
+            {loading ? "Criando..." : "Criar conta"}
           </button>
         </form>
-        <div style={{ display:"flex", alignItems:"center", gap:12, margin:"20px 0" }}>
-          <div style={{ flex:1, height:1, background:"#e4e8f0" }} />
-          <span style={{ fontSize:12, color:"#6b7f99", fontWeight:600 }}>ou</span>
-          <div style={{ flex:1, height:1, background:"#e4e8f0" }} />
-        </div>
-        <div style={{ textAlign:"center", fontSize:14, color:"#6b7f99" }}>
+        <div style={{ textAlign:"center", fontSize:14, color:"#6b7f99", marginTop:20 }}>
           Ja tem conta?{" "}
           <Link href="/auth/login" style={{ color:"#1d6aff", fontWeight:700, textDecoration:"none" }}>Fazer login</Link>
         </div>
