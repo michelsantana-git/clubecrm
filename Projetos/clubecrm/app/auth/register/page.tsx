@@ -46,57 +46,6 @@ export default function RegisterPage() {
     }
     if (data.user && !data.session) { setSent(true); }
     else if (data.session) { window.location.href = "/dashboard"; }
-    setLoading(fals
-
-cat > app/auth/register/page.tsx << 'EOF'
-"use client";
-import { useState } from "react";
-import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
-
-const S = {
-  wrap:  { minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"linear-gradient(135deg,#eef2ff 0%,#f5f6fa 50%,#e8f4ff 100%)", fontFamily:"'DM Sans','Segoe UI',sans-serif", padding:"24px 16px" } as React.CSSProperties,
-  card:  { width:"100%", maxWidth:440, background:"#ffffff", borderRadius:20, padding:"36px 40px", boxShadow:"0 8px 40px rgba(0,0,0,0.10)", border:"1px solid #e4e8f0" } as React.CSSProperties,
-  label: { fontSize:12, fontWeight:700, color:"#3d5570", display:"block", marginBottom:6 } as React.CSSProperties,
-  input: { width:"100%", background:"#f5f6fa", border:"1.5px solid #e4e8f0", borderRadius:10, color:"#0d1b2e", padding:"12px 14px", fontSize:14, outline:"none", boxSizing:"border-box", fontFamily:"inherit" } as React.CSSProperties,
-  btn:   { width:"100%", padding:"13px", background:"#1d6aff", color:"#fff", border:"none", borderRadius:10, fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit" } as React.CSSProperties,
-  err:   { padding:"12px 14px", background:"#d42e2e10", border:"1px solid #d42e2e30", borderRadius:10, color:"#d42e2e", fontSize:13, marginBottom:16, lineHeight:1.6 } as React.CSSProperties,
-  ok:    { padding:"12px 14px", background:"#0a9e6e12", border:"1px solid #0a9e6e30", borderRadius:10, color:"#0a9e6e", fontSize:13, marginBottom:16, lineHeight:1.6 } as React.CSSProperties,
-};
-
-export default function RegisterPage() {
-  const supabase = createClient();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [sent, setSent] = useState(false);
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    if (!name.trim() || name.trim().length < 2) { setError("Nome deve ter pelo menos 2 caracteres."); return; }
-    if (!email || !/\S+@\S+\.\S+/.test(email)) { setError("E-mail invalido."); return; }
-    if (password.length < 6) { setError("A senha deve ter pelo menos 6 caracteres."); return; }
-    if (password !== confirm) { setError("As senhas nao coincidem."); return; }
-    setLoading(true);
-    const { data, error } = await supabase.auth.signUp({
-      email: email.trim().toLowerCase(),
-      password,
-      options: {
-        data: { name: name.trim() },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-    if (error) {
-      setError(`Erro Supabase: ${error.message} | status: ${error.status}`);
-      setLoading(false);
-      return;
-    }
-    if (data.user && !data.session) { setSent(true); }
-    else if (data.session) { window.location.href = "/dashboard"; }
     setLoading(false);
   };
 
