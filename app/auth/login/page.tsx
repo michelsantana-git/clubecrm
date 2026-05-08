@@ -33,7 +33,7 @@ function LoginForm() {
            "Erro ao fazer login. Tente novamente."}
         </div>
       )}
-      <form action="/api/auth/login" method="POST" onSubmit={() => setLoading(true)}>
+      <form action="/api/signin" method="POST" onSubmit={() => setLoading(true)}>
         <div style={{ marginBottom:16 }}>
           <label style={S.label}>E-mail</label>
           <input type="email" name="email" placeholder="seu@email.com" required autoFocus style={S.input} />
