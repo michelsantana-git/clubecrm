@@ -1,7 +1,6 @@
 "use client";
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 
 const S = {
   wrap: { minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"linear-gradient(135deg,#eef2ff 0%,#f5f6fa 50%,#e8f4ff 100%)", fontFamily:"sans-serif", padding:"24px 16px" } as React.CSSProperties,
@@ -10,53 +9,12 @@ const S = {
   input: { width:"100%", background:"#f5f6fa", border:"1.5px solid #e4e8f0", borderRadius:10, color:"#0d1b2e", padding:"12px 14px", fontSize:14, outline:"none", boxSizing:"border-box", fontFamily:"inherit" } as React.CSSProperties,
   btn: { width:"100%", padding:"13px", background:"#1d6aff", color:"#fff", border:"none", borderRadius:10, fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit" } as React.CSSProperties,
   err: { padding:"12px 14px", background:"#d42e2e10", border:"1px solid #d42e2e30", borderRadius:10, color:"#d42e2e", fontSize:13, marginBottom:18 } as React.CSSProperties,
-  ok: { padding:"12px 14px", background:"#0a9e6e12", border:"1px solid #0a9e6e30", borderRadius:10, color:"#0a9e6e", fontSize:13, marginBottom:18, textAlign:"center" as const },
 };
 
 function LoginForm() {
-  const supabase = createClient();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const searchParams = useSearchParams();
+  const errorParam = searchParams.get("error");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null); setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(), password,
-    });
-    if (error) {
-      setError(error.message === "Invalid login credentials"
-        ? "E-mail ou senha incorretos."
-        : error.message.includes("Email not confirmed")
-        ? "Confirme seu e-mail antes de entrar."
-        : "Erro: " + error.message);
-      setLoading(false);
-      return;
-    }
-    if (data.session) {
-      setSuccess(true);
-      // Aguarda 1.5s para garantir que o cookie foi gravado
-      // antes do servidor verificar a sessão
-      await new Promise(r => setTimeout(r, 1500));
-      window.location.replace("/dashboard");
-    } else {
-      setError("Sessao nao iniciada. Tente novamente.");
-      setLoading(false);
-    }
-  };
-
-  if (success) return (
-    <div style={S.card}>
-      <div style={S.ok}>
-        <div style={{ fontSize:24, marginBottom:8 }}>✓</div>
-        <div style={{ fontWeight:700 }}>Login realizado!</div>
-        <div style={{ fontSize:12, marginTop:4 }}>Redirecionando...</div>
-      </div>
-    </div>
-  );
 
   return (
     <div style={S.card}>
@@ -68,17 +26,21 @@ function LoginForm() {
         <h1 style={{ fontSize:22, fontWeight:900, color:"#0d1b2e", margin:"0 0 6px" }}>Bem-vindo de volta</h1>
         <p style={{ fontSize:14, color:"#6b7f99", margin:0 }}>Entre na sua conta para continuar</p>
       </div>
-      {error && <div style={S.err}>{error}</div>}
-      <form onSubmit={handleLogin}>
+      {errorParam && (
+        <div style={S.err}>
+          {errorParam === "invalid_credentials" ? "E-mail ou senha incorretos." :
+           errorParam === "email_not_confirmed" ? "Confirme seu e-mail antes de entrar." :
+           "Erro ao fazer login. Tente novamente."}
+        </div>
+      )}
+      <form action="/api/auth/login" method="POST" onSubmit={() => setLoading(true)}>
         <div style={{ marginBottom:16 }}>
           <label style={S.label}>E-mail</label>
-          <input type="email" value={email} placeholder="seu@email.com" required autoFocus
-            onChange={e => { setEmail(e.target.value); setError(null); }} style={S.input} />
+          <input type="email" name="email" placeholder="seu@email.com" required autoFocus style={S.input} />
         </div>
         <div style={{ marginBottom:8 }}>
           <label style={S.label}>Senha</label>
-          <input type="password" value={password} placeholder="Sua senha" required
-            onChange={e => { setPassword(e.target.value); setError(null); }} style={S.input} />
+          <input type="password" name="password" placeholder="Sua senha" required style={S.input} />
         </div>
         <div style={{ textAlign:"right", marginBottom:22 }}>
           <a href="/auth/forgot-password" style={{ fontSize:13, color:"#1d6aff", fontWeight:600, textDecoration:"none" }}>Esqueci minha senha</a>
