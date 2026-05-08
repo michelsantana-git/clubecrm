@@ -19,23 +19,19 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Listar todos os cookies para debug
-  const allCookies = request.cookies.getAll();
-  const cookieNames = allCookies.map(c => c.name).join(', ');
-  
-  // Verificar se tem qualquer cookie de sessão do Supabase
-  const hasSession = allCookies.some(c => 
-    c.name.includes('supabase') || 
-    c.name.includes('sb-') ||
-    c.name.includes('session') ||
-    c.name.includes('token')
-  );
+  const cookie = request.cookies.get('sb-btkhntalnjfwdqkioeoi-auth-token');
 
-  if (!hasSession) {
-    // Redireciona com info de debug na URL
-    const url = new URL('/auth/login', request.url);
-    url.searchParams.set('debug', `no_cookie_found_cookies_were:_${cookieNames || 'none'}`);
-    return NextResponse.redirect(url);
+  if (!cookie?.value) {
+    return NextResponse.redirect(new URL('/auth/login', request.url));
+  }
+
+  try {
+    const parsed = JSON.parse(decodeURIComponent(cookie.value));
+    if (!parsed?.access_token) {
+      return NextResponse.redirect(new URL('/auth/login', request.url));
+    }
+  } catch {
+    return NextResponse.redirect(new URL('/auth/login', request.url));
   }
 
   return NextResponse.next();

@@ -1,10 +1,16 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getSessionFromCookie } from "@/lib/supabase/server";
 
 export default async function DashboardPage() {
-  const supabase = createClient();
+  const token = await getSessionFromCookie();
   
-  const { data: { user }, error } = await supabase.auth.getUser();
+  if (!token) {
+    redirect("/auth/login");
+  }
+
+  // Buscar dados do usuário com o token
+  const supabase = createClient();
+  const { data: { user }, error } = await supabase.auth.getUser(token);
 
   if (error || !user) {
     redirect("/auth/login");
@@ -18,9 +24,10 @@ export default async function DashboardPage() {
           Ola, {user.email}!
         </h1>
         <p style={{ fontSize:15, color:"#6b7f99", marginBottom:28 }}>
-          Login funcionando com sucesso.
+          Login funcionando com sucesso!
         </p>
-        <a href="/auth/login" style={{ padding:"10px 24px", background:"#1d6aff", color:"#fff", borderRadius:8, fontSize:13, fontWeight:700, textDecoration:"none" }}>
+        <a href="/auth/login"
+          style={{ padding:"10px 24px", background:"#1d6aff", color:"#fff", borderRadius:8, fontSize:13, fontWeight:700, textDecoration:"none" }}>
           Sair
         </a>
       </div>
