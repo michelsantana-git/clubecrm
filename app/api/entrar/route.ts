@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     new NextResponse(
       `<!DOCTYPE html><html><head>
         <meta http-equiv="refresh" content="0;url=${origin}${path}">
-      </head><body></body></html>`,
+      </head><body><p>Redirecionando...</p></body></html>`,
       { status: 200, headers: { "Content-Type": "text/html" } }
     );
 
@@ -30,12 +30,10 @@ export async function POST(request: NextRequest) {
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
             const opts = [
-              `${name}=${value}`,
+              `${name}=${encodeURIComponent(value)}`,
               "Path=/",
               options?.maxAge ? `Max-Age=${options.maxAge}` : "",
-              options?.sameSite ? `SameSite=${options.sameSite}` : "SameSite=Lax",
-              options?.secure ? "Secure" : "",
-              options?.httpOnly ? "HttpOnly" : "",
+              "SameSite=Lax",
             ].filter(Boolean).join("; ");
             cookieHeader.push(opts);
           });
@@ -59,6 +57,7 @@ export async function POST(request: NextRequest) {
     return redirect("/auth/login?error=no_session");
   }
 
+  // Login bem sucedido — setar cookies e ir para dashboard
   const response = redirect("/dashboard");
   cookieHeader.forEach(c => response.headers.append("Set-Cookie", c));
   return response;
