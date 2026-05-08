@@ -7,35 +7,33 @@ export async function POST(request: NextRequest) {
   const password = formData.get("password") as string;
   const origin   = request.nextUrl.origin;
 
-  const redirect = (path: string) =>
-    new NextResponse(
-      `<!DOCTYPE html><html><head>
-        <meta http-equiv="refresh" content="0;url=${origin}${path}">
-      </head><body><p>Redirecionando...</p></body></html>`,
-      { status: 200, headers: { "Content-Type": "text/html" } }
-    );
-
   if (!email || !password) {
-    return redirect("/auth/login?error=missing_fields");
+    return NextResponse.redirect(new URL("/auth/login?error=missing_fields", origin), { status: 303 });
   }
 
-  const cookieHeader: string[] = [];
+  // Criar resposta de redirect para o dashboard
+  const successResponse = NextResponse.redirect(new URL("/dashboard", origin), { status: 303 });
+  const errorResponse = (code: string) =>
+    NextResponse.redirect(new URL(`/auth/login?error=${code}`, origin), { status: 303 });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() { return request.cookies.getAll(); },
+        getAll() {
+          return request.cookies.getAll();
+        },
         setAll(cookiesToSet) {
+          // Setar cookies na resposta de sucesso
           cookiesToSet.forEach(({ name, value, options }) => {
-            const opts = [
-              `${name}=${encodeURIComponent(value)}`,
-              "Path=/",
-              options?.maxAge ? `Max-Age=${options.maxAge}` : "",
-              "SameSite=Lax",
-            ].filter(Boolean).join("; ");
-            cookieHeader.push(opts);
+            successResponse.cookies.set(name, value, {
+              ...options,
+              sameSite: "lax",
+              httpOnly: true,
+              secure: true,
+              path: "/",
+            });
           });
         },
       },
@@ -50,15 +48,12 @@ export async function POST(request: NextRequest) {
       : error.message.includes("Email not confirmed")
       ? "email_not_confirmed"
       : encodeURIComponent(error.message);
-    return redirect(`/auth/login?error=${code}`);
+    return errorResponse(code);
   }
 
   if (!data.session) {
-    return redirect("/auth/login?error=no_session");
+    return errorResponse("no_session");
   }
 
-  // Login bem sucedido — setar cookies e ir para dashboard
-  const response = redirect("/dashboard");
-  cookieHeader.forEach(c => response.headers.append("Set-Cookie", c));
-  return response;
+  return successResponse;
 }
