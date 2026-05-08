@@ -1,5 +1,5 @@
 "use client";
-import { useState, Suspense } from "react";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 const S = {
@@ -8,13 +8,12 @@ const S = {
   label: { fontSize:12, fontWeight:700, color:"#3d5570", display:"block", marginBottom:6 } as React.CSSProperties,
   input: { width:"100%", background:"#f5f6fa", border:"1.5px solid #e4e8f0", borderRadius:10, color:"#0d1b2e", padding:"12px 14px", fontSize:14, outline:"none", boxSizing:"border-box", fontFamily:"inherit" } as React.CSSProperties,
   btn: { width:"100%", padding:"13px", background:"#1d6aff", color:"#fff", border:"none", borderRadius:10, fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit" } as React.CSSProperties,
-  err: { padding:"12px 14px", background:"#d42e2e10", border:"1px solid #d42e2e30", borderRadius:10, color:"#d42e2e", fontSize:13, marginBottom:18 } as React.CSSProperties,
+  err: { padding:"12px 14px", background:"#d42e2e10", border:"1px solid #d42e2e30", borderRadius:10, color:"#d42e2e", fontSize:13, marginBottom:18, wordBreak:"break-all" as const },
 };
 
 function LoginForm() {
   const searchParams = useSearchParams();
   const errorParam = searchParams.get("error");
-  const [loading, setLoading] = useState(false);
 
   return (
     <div style={S.card}>
@@ -30,10 +29,12 @@ function LoginForm() {
         <div style={S.err}>
           {errorParam === "invalid_credentials" ? "E-mail ou senha incorretos." :
            errorParam === "email_not_confirmed" ? "Confirme seu e-mail antes de entrar." :
-           "Erro ao fazer login. Tente novamente."}
+           errorParam === "env_missing" ? "Erro de configuracao do servidor." :
+           errorParam === "no_session" ? "Sessao nao criada. Tente novamente." :
+           `Erro: ${decodeURIComponent(errorParam)}`}
         </div>
       )}
-      <form action="/api/signin" method="POST" onSubmit={() => setLoading(true)}>
+      <form action="/api/signin" method="POST">
         <div style={{ marginBottom:16 }}>
           <label style={S.label}>E-mail</label>
           <input type="email" name="email" placeholder="seu@email.com" required autoFocus style={S.input} />
@@ -45,10 +46,7 @@ function LoginForm() {
         <div style={{ textAlign:"right", marginBottom:22 }}>
           <a href="/auth/forgot-password" style={{ fontSize:13, color:"#1d6aff", fontWeight:600, textDecoration:"none" }}>Esqueci minha senha</a>
         </div>
-        <button type="submit" disabled={loading}
-          style={{ ...S.btn, opacity:loading?0.7:1, cursor:loading?"not-allowed":"pointer" }}>
-          {loading ? "Entrando..." : "Entrar na conta"}
-        </button>
+        <button type="submit" style={S.btn}>Entrar na conta</button>
       </form>
       <div style={{ display:"flex", alignItems:"center", gap:12, margin:"22px 0" }}>
         <div style={{ flex:1, height:1, background:"#e4e8f0" }} />

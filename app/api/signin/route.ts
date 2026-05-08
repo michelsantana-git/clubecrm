@@ -11,11 +11,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(new URL("/auth/login?error=missing_fields", appUrl), { status: 303 });
   }
 
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return NextResponse.redirect(new URL("/auth/login?error=env_missing", appUrl), { status: 303 });
+  }
+
   const response = NextResponse.redirect(new URL("/dashboard", appUrl), { status: 303 });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
       cookies: {
         getAll() {
@@ -30,15 +34,15 @@ export async function POST(request: NextRequest) {
     }
   );
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    const code = error.message === "Invalid login credentials"
-      ? "invalid_credentials"
-      : error.message.includes("Email not confirmed")
-      ? "email_not_confirmed"
-      : "unknown";
+    const code = encodeURIComponent(error.message);
     return NextResponse.redirect(new URL(`/auth/login?error=${code}`, appUrl), { status: 303 });
+  }
+
+  if (!data.session) {
+    return NextResponse.redirect(new URL("/auth/login?error=no_session", appUrl), { status: 303 });
   }
 
   return response;
