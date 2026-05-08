@@ -40,7 +40,7 @@ export default function RegisterPage() {
       },
     });
     if (error) {
-      setError("ERRO_SUPABASE: " + error.message + " | STATUS: " + error.status);
+      const msg = error.message.includes("rate limit") ? "Muitas tentativas. Aguarde alguns minutos e tente novamente." : error.message.includes("already registered") ? "Este e-mail ja esta cadastrado. Faca login ou recupere sua senha." : "Erro ao criar conta: " + error.message; setError(msg);
       setLoading(false);
       return;
     }
