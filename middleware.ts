@@ -5,6 +5,7 @@ const PUBLIC_PATHS = [
   '/api/public',
   '/api/entrar',
   '/api/signin',
+  '/api/auth/signout',
   '/p/',
   '/diagnostico',
 ];
