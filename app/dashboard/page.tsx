@@ -1,36 +1,24 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
 
-// Server Component — verifica sessão e redireciona para o app
 export default async function DashboardPage() {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) redirect("/auth/login");
-
-  // Buscar profile
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-
+  const cookieStore = cookies();
+  const allCookies = (await cookieStore).getAll();
+  
   return (
-    <main style={{ minHeight:"100vh", background:"#f0f4f8", fontFamily:"'DM Sans','Segoe UI',sans-serif", display:"flex", alignItems:"center", justifyContent:"center" }}>
-      <div style={{ textAlign:"center", padding:40 }}>
-        <div style={{ fontSize:48, marginBottom:16 }}>🚀</div>
-        <h1 style={{ fontSize:26, fontWeight:900, color:"#0d1b2e", marginBottom:10, letterSpacing:"-0.03em" }}>
-          Olá, {profile?.name ?? user.email}!
-        </h1>
-        <p style={{ fontSize:15, color:"#6b7f99", marginBottom:28 }}>
-          Seu ClubeCRM está configurado e pronto para uso.
+    <main style={{ padding:40, fontFamily:"sans-serif" }}>
+      <h1 style={{ fontSize:20, marginBottom:20 }}>Dashboard — Debug de Cookies</h1>
+      <div style={{ background:"#f5f6fa", borderRadius:10, padding:20 }}>
+        <p style={{ fontSize:13, marginBottom:12, fontWeight:700 }}>
+          Total de cookies recebidos pelo servidor: {allCookies.length}
         </p>
-        <div style={{ background:"#fff", border:"1px solid #e4e8f0", borderRadius:16, padding:"24px 28px", maxWidth:480, margin:"0 auto", boxShadow:"0 2px 16px rgba(0,0,0,0.06)" }}>
-          <div style={{ fontSize:13, fontWeight:700, color:"#6b7f99", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:12 }}>Próximo passo</div>
-          <p style={{ fontSize:14, color:"#3d5570", lineHeight:1.6 }}>
-            Integre o componente <code style={{ background:"#f0f4f8", padding:"2px 6px", borderRadius:4, fontSize:12 }}>crm-v4.jsx</code> aqui como Client Component para ter o CRM completo rodando com dados reais do Supabase.
-          </p>
-        </div>
+        {allCookies.map(c => (
+          <div key={c.name} style={{ fontSize:11, fontFamily:"monospace", marginBottom:6, wordBreak:"break-all", background:"#fff", padding:"6px 10px", borderRadius:6 }}>
+            <strong>{c.name}</strong>: {c.value.substring(0, 80)}...
+          </div>
+        ))}
+        {allCookies.length === 0 && (
+          <p style={{ color:"red", fontSize:13 }}>Nenhum cookie chegou ao servidor!</p>
+        )}
       </div>
     </main>
   );
