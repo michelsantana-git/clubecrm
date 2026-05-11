@@ -633,20 +633,20 @@ const LeadsPage = ({ proj, setProj, C }) => {
 
       {/* Forms strip */}
       <div style={{ display:"flex", gap:9, flexWrap:"wrap" }}>
-        {proj.forms.map(f => (<div key={f.id} onClick={()=>setShowFormEditor(f)} style={{cursor:"pointer"}}>
-          <div key={f.id} onClick={() => setShowForm(f)}
+        {proj.forms.map(f => (
+          <div key={f.id} onClick={()=>setShowFormEditor(f)}
             style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:10, padding:"11px 15px", cursor:"pointer", display:"flex", gap:12, alignItems:"center", flex:1, minWidth:220, boxShadow:C.shadowCard, transition:"border-color 0.15s" }}
-            onMouseEnter={e => e.currentTarget.style.borderColor=C.accent}
-            onMouseLeave={e => e.currentTarget.style.borderColor=C.border}>
-            <Icon n="folder" size={15} style={{ color:proj.color }} />
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor=C.accent}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor=C.border}>
+            <Icon n="folder" size={15} color={proj.color} />
             <div style={{ flex:1 }}>
               <div style={{ fontSize:13, fontWeight:700, color:C.text }}>{f.name}</div>
               <div style={{ fontSize:11, color:C.textSub }}>{f.subs} submissões · tag: <span style={{ color:proj.color, fontWeight:700 }}>{f.tag}</span></div>
             </div>
-            <Icon n="arrow" size={13} style={{ color:C.textSub }} />
+            <Icon n="arrow" size={13} color={C.textSub} />
           </div>
         ))}
-        <div onClick={() => {}} style={{ background:"transparent", border:`1px dashed ${C.borderHover}`, borderRadius:10, padding:"11px 15px", cursor:"pointer", display:"flex", gap:7, alignItems:"center", color:C.textSub, fontSize:12, fontWeight:600, whiteSpace:"nowrap" }}>
+        <div onClick={() => setShowFormEditor({})} style={{ background:"transparent", border:`1px dashed ${C.borderHover}`, borderRadius:10, padding:"11px 15px", cursor:"pointer", display:"flex", gap:7, alignItems:"center", color:C.textSub, fontSize:12, fontWeight:600, whiteSpace:"nowrap" }}>
           <Icon n="plus" size={12} /> Novo formulário
         </div>
       </div>
