@@ -31,19 +31,30 @@ export default function RegisterPage() {
     if (password.length < 6) { setError("A senha deve ter pelo menos 6 caracteres."); return; }
     if (password !== confirm) { setError("As senhas nao coincidem."); return; }
     setLoading(true);
+
+    // Usar NEXT_PUBLIC_APP_URL em vez de window.location.origin
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== "undefined" ? window.location.origin : "");
+
     const { data, error } = await supabase.auth.signUp({
       email: email.trim().toLowerCase(),
       password,
       options: {
         data: { name: name.trim() },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${appUrl}/auth/callback`,
       },
     });
+
     if (error) {
-      const msg = error.message.includes("rate limit") ? "Muitas tentativas. Aguarde alguns minutos e tente novamente." : error.message.includes("already registered") ? "Este e-mail ja esta cadastrado. Faca login ou recupere sua senha." : "Erro ao criar conta: " + error.message; setError(msg);
+      const msg = error.message.includes("rate limit")
+        ? "Muitas tentativas. Aguarde alguns minutos e tente novamente."
+        : error.message.includes("already registered")
+        ? "Este e-mail ja esta cadastrado. Faca login ou recupere sua senha."
+        : "Erro ao criar conta: " + error.message;
+      setError(msg);
       setLoading(false);
       return;
     }
+
     if (data.user && !data.session) { setSent(true); }
     else if (data.session) { window.location.href = "/dashboard"; }
     setLoading(false);
@@ -53,11 +64,11 @@ export default function RegisterPage() {
     <main style={S.wrap}>
       <div style={S.card}>
         <div style={{ textAlign:"center" }}>
-          <div style={{ width:70, height:70, borderRadius:"50%", background:"#0a9e6e12", border:"2px solid #0a9e6e30", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 20px", fontSize:32 }}>ok</div>
+          <div style={{ width:70, height:70, borderRadius:"50%", background:"#0a9e6e12", border:"2px solid #0a9e6e30", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 20px", fontSize:32 }}>✉</div>
           <h1 style={{ fontSize:22, fontWeight:900, color:"#0d1b2e", margin:"0 0 10px" }}>Confirme seu e-mail</h1>
           <p style={{ fontSize:14, color:"#6b7f99", lineHeight:1.6, margin:"0 0 6px" }}>Enviamos um link para</p>
           <p style={{ fontSize:14, fontWeight:700, color:"#0d1b2e", margin:"0 0 22px", fontFamily:"monospace" }}>{email}</p>
-          <div style={S.ok}>Clique no link para ativar sua conta.</div>
+          <div style={S.ok}>Clique no link para ativar sua conta. Verifique tambem a pasta de spam.</div>
           <Link href="/auth/login" style={{ display:"block", padding:"12px", background:"transparent", color:"#1d6aff", border:"1.5px solid #e4e8f0", borderRadius:10, fontSize:14, fontWeight:700, textDecoration:"none", textAlign:"center" }}>Voltar para o login</Link>
         </div>
       </div>
@@ -98,7 +109,12 @@ export default function RegisterPage() {
             {loading ? "Criando..." : "Criar conta"}
           </button>
         </form>
-        <div style={{ textAlign:"center", fontSize:14, color:"#6b7f99", marginTop:20 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:12, margin:"20px 0" }}>
+          <div style={{ flex:1, height:1, background:"#e4e8f0" }} />
+          <span style={{ fontSize:12, color:"#6b7f99", fontWeight:600 }}>ou</span>
+          <div style={{ flex:1, height:1, background:"#e4e8f0" }} />
+        </div>
+        <div style={{ textAlign:"center", fontSize:14, color:"#6b7f99" }}>
           Ja tem conta?{" "}
           <Link href="/auth/login" style={{ color:"#1d6aff", fontWeight:700, textDecoration:"none" }}>Fazer login</Link>
         </div>
