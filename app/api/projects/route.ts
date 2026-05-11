@@ -6,10 +6,8 @@ function getSession() {
   const cookieStore = cookies();
   const cookie = cookieStore.get("sb-btkhntalnjfwdqkioeoi-auth-token");
   if (!cookie?.value) return null;
-  try {
-    const decoded = JSON.parse(decodeURIComponent(cookie.value));
-    return decoded;
-  } catch { return null; }
+  try { return JSON.parse(decodeURIComponent(cookie.value)); }
+  catch { return null; }
 }
 
 export async function GET() {
@@ -18,7 +16,7 @@ export async function GET() {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("projects")
-    .select("*, forms(*), leads(id,stage,score,newsletter_subscribed)")
+    .select("*, forms(*)")
     .eq("owner_id", session.user.id)
     .order("created_at", { ascending: true });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
@@ -30,18 +28,21 @@ export async function POST(request: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   const body = await request.json();
   const supabase = createClient();
+
+  const fields: any = {
+    name: body.name,
+    description: body.description ?? body.desc ?? "",
+    color: body.color ?? "#1d6aff",
+    icon: body.icon ?? "◈",
+    funnel_stages: body.funnel_stages ?? body.funnel ?? ["novo","contato","qualificado","proposta","fechado"],
+    updated_at: new Date().toISOString(),
+  };
+  if (body.scoring_rules !== undefined) fields.scoring_rules = body.scoring_rules;
+
   if (body.id) {
-    // Atualizar projeto existente
     const { data, error } = await supabase
       .from("projects")
-      .update({
-        name: body.name,
-        description: body.description,
-        color: body.color,
-        icon: body.icon,
-        funnel_stages: body.funnel_stages,
-        updated_at: new Date().toISOString(),
-      })
+      .update(fields)
       .eq("id", body.id)
       .eq("owner_id", session.user.id)
       .select()
@@ -49,17 +50,10 @@ export async function POST(request: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ project: data });
   }
-  // Criar novo projeto
+
   const { data, error } = await supabase
     .from("projects")
-    .insert({
-      owner_id: session.user.id,
-      name: body.name,
-      description: body.description || "",
-      color: body.color || "#1d6aff",
-      icon: body.icon || "◈",
-      funnel_stages: body.funnel_stages || ["novo","contato","qualificado","proposta","fechado"],
-    })
+    .insert({ ...fields, owner_id: session.user.id })
     .select()
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });

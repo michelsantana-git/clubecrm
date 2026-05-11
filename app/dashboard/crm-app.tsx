@@ -1217,7 +1217,23 @@ const ScoringPage = ({ proj, setProj, C }) => {
   const [newRule, setNewRule] = useState({ label:"", points:10 });
 
   const saveRules = (updatedRules: any[]) => {
-    setProj((p: any) => ({ ...p, scoringRules: updatedRules }));
+    setProj((p: any) => {
+      const updated = { ...p, scoringRules: updatedRules };
+      // Salvar no banco — usamos funnel_stages como proxy temporário 
+      // scoringRules será salvo como campo extra quando adicionarmos a coluna
+      fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: p.dbId || p.id,
+          name: p.name, description: p.desc,
+          color: p.color, icon: p.icon,
+          funnel_stages: p.funnel,
+          scoring_rules: updatedRules,
+        }),
+      }).catch(() => {});
+      return updated;
+    });
   };
   const deleteRule = (id: number) => saveRules(rules.filter(r => r.id !== id));
   const addRule = () => {
@@ -2231,17 +2247,33 @@ export default function CRMApp({ userEmail, userName, userId }: CRMAppProps) {
       </main>
 
       {showNewProj && <NewProject C={C} onClose={()=>setShowNewProj(false)} onCreate={async p=>{
+        const tempId = p.id;
         setProjects(prev=>[...prev,p]);
-        setActiveId(p.id);
+        setActiveId(tempId);
         setPage("crm");
+        setShowNewProj(false);
+        // Salvar no banco e atualizar ID
         const dbId = await saveProject(p);
-        if(dbId) setProjects(prev=>prev.map(x=>x.id===p.id?{...x,dbId,id:dbId}:x));
+        if(dbId) {
+          setProjects(prev=>prev.map(x=>x.id===tempId?{...x,dbId,id:dbId}:x));
+          setActiveId(dbId);
+        }
       }}/>}
       {showEditProj && active && <EditProject proj={active} C={C} onClose={()=>setShowEditProj(false)}
         onSave={async updated=>{
           setProjects(prev=>prev.map(p=>p.id===updated.id?updated:p));
           setShowEditProj(false);
-          await saveProject({...updated, dbId: updated.dbId||updated.id});
+          // Salvar no banco com todos os campos
+          await fetch("/api/projects", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: updated.dbId || updated.id,
+              name: updated.name, description: updated.desc,
+              color: updated.color, icon: updated.icon,
+              funnel_stages: updated.funnel,
+            }),
+          }).catch(() => {});
         }}
         onDelete={async id=>{
           const proj = projects.find(p=>p.id===id);
