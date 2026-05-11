@@ -1014,7 +1014,6 @@ const EmailPage = ({ proj, setProj, C }) => {
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
-      {editLead && <KanbanLeadModal />}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
         <div>
           <div style={{ fontSize:11, color:proj.color, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:4, fontWeight:700 }}>{proj.icon} {proj.name}</div>
@@ -1768,7 +1767,6 @@ const LandingPages = ({ proj, setProj, C }) => {
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
-      {editLead && <KanbanLeadModal />}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
         <div>
           <div style={{ fontSize:11, color:proj.color, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:4, fontWeight:700 }}>{proj.icon} {proj.name}</div>
