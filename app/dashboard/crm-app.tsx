@@ -439,6 +439,143 @@ const GlobalDashboard = ({ projects, C }) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // CRM KANBAN
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Formulário de novo lead (usado no kanban e em leads) ─────────────────────
+const AddLeadForm = ({ proj, setProj, C, saveLead, onClose, defaultStage = "novo" }) => {
+  const DEFAULT_FIELDS = ["Nome completo","Empresa","Ramo de atividade","Faturamento anual","Qtd. de funcionários","Cidade","Telefone / WhatsApp","E-mail"];
+  const [data, setData] = useState<Record<string,string>>({});
+  const [loading, setLoading] = useState(false);
+
+  const set = (k: string, v: string) => setData(p => ({...p, [k]: v}));
+
+  const handleSave = async () => {
+    if (!data["Nome completo"] || !data["E-mail"]) return;
+    setLoading(true);
+    const newLead = {
+      id: "l" + Date.now(),
+      name: data["Nome completo"] || "",
+      email: data["E-mail"] || "",
+      phone: data["Telefone / WhatsApp"] || "",
+      company: data["Empresa"] || "",
+      tags: [],
+      score: 40,
+      stage: defaultStage,
+      source: "Manual",
+      date: new Date().toISOString().split("T")[0],
+      nl: false,
+      notes: Object.entries(data).filter(([k]) => !["Nome completo","E-mail","Telefone / WhatsApp","Empresa"].includes(k)).map(([k,v]) => `${k}: ${v}`).join(" | "),
+    };
+    const projectId = proj.dbId || proj.id;
+    const dbId = saveLead ? await saveLead(newLead, projectId) : null;
+    const withDb = dbId ? {...newLead, dbId, id: dbId} : newLead;
+    setProj((p: any) => ({...p, leads: [...p.leads, withDb]}));
+    setLoading(false);
+    onClose();
+  };
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:10}}>
+      {DEFAULT_FIELDS.map(field => (
+        <div key={field}>
+          <label style={{fontSize:11,color:"#6b7f99",display:"block",marginBottom:4,fontWeight:600}}>{field}{["Nome completo","E-mail"].includes(field)?" *":""}</label>
+          <input value={data[field]||""} onChange={e=>set(field,e.target.value)} placeholder={field}
+            style={{width:"100%",background:"#f5f6fa",border:"1.5px solid #e4e8f0",borderRadius:8,color:"#0d1b2e",padding:"9px 12px",fontSize:13,outline:"none",boxSizing:"border-box" as const,fontFamily:"inherit"}}/>
+        </div>
+      ))}
+      <div style={{marginTop:4}}>
+        <label style={{fontSize:11,color:"#6b7f99",display:"block",marginBottom:4,fontWeight:600}}>Etapa do funil</label>
+        <select defaultValue={defaultStage} onChange={e=>set("_stage",e.target.value)}
+          style={{width:"100%",background:"#f5f6fa",border:"1.5px solid #e4e8f0",borderRadius:8,color:"#0d1b2e",padding:"9px 12px",fontSize:13,fontFamily:"inherit",outline:"none"}}>
+          {proj.funnel.map((s:string)=><option key={s} value={s}>{s}</option>)}
+        </select>
+      </div>
+      <button onClick={handleSave} disabled={loading||!data["Nome completo"]||!data["E-mail"]}
+        style={{background:"#1d6aff",color:"#fff",border:"none",borderRadius:9,padding:"12px",fontSize:13,fontWeight:700,cursor:"pointer",opacity:(!data["Nome completo"]||!data["E-mail"])?0.5:1,fontFamily:"inherit"}}>
+        {loading ? "Salvando..." : "Adicionar lead"}
+      </button>
+    </div>
+  );
+};
+
+// ── Importação CSV no kanban ──────────────────────────────────────────────────
+const ImportCSVForm = ({ proj, setProj, C, saveLead, onClose }) => {
+  const [text, setText] = useState("");
+  const [preview, setPreview] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const parseCSV = (csv: string) => {
+    const lines = csv.trim().split("\n");
+    if (lines.length < 2) return [];
+    const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g,"").toLowerCase());
+    return lines.slice(1).map(line => {
+      const vals = line.split(",").map(v => v.trim().replace(/^"|"$/g,""));
+      const row: any = {};
+      headers.forEach((h,i) => { row[h] = vals[i] || ""; });
+      return {
+        id: "l"+Date.now()+Math.random(),
+        name: row.nome || row.name || "",
+        email: row.email || "",
+        phone: row.telefone || row.phone || "",
+        company: row.empresa || row.company || "",
+        tags: (row.tags||"").split(";").map((t:string)=>t.trim()).filter(Boolean),
+        score: parseInt(row.score)||40,
+        stage: row.stage || row.etapa || "novo",
+        source: "Importação CSV",
+        date: new Date().toISOString().split("T")[0],
+        nl: false,
+      };
+    }).filter(r => r.name || r.email);
+  };
+
+  const handleText = (v: string) => { setText(v); setPreview(parseCSV(v)); };
+
+  const handleFile = (e: any) => {
+    const file = e.target.files?.[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => handleText(ev.target?.result as string);
+    reader.readAsText(file);
+  };
+
+  const importAll = async () => {
+    setLoading(true);
+    const projectId = proj.dbId || proj.id;
+    const saved: any[] = [];
+    for (const lead of preview) {
+      const dbId = saveLead ? await saveLead(lead, projectId) : null;
+      saved.push(dbId ? {...lead, dbId, id: dbId} : lead);
+    }
+    setProj((p: any) => ({...p, leads: [...p.leads, ...saved]}));
+    setLoading(false);
+    onClose();
+  };
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:12}}>
+      <div>
+        <label style={{fontSize:11,color:"#6b7f99",display:"block",marginBottom:6,fontWeight:600}}>Arquivo CSV</label>
+        <input type="file" accept=".csv,text/csv" onChange={handleFile}
+          style={{fontSize:12,color:"#6b7f99",cursor:"pointer",display:"block",marginBottom:8}}/>
+        <textarea value={text} onChange={e=>handleText(e.target.value)} placeholder={"nome,email,telefone,empresa,score,stage João Silva,joao@ex.com,(11) 99999-9999,Empresa A,80,qualificado"}
+
+          rows={4} style={{width:"100%",background:"#f5f6fa",border:"1.5px solid #e4e8f0",borderRadius:8,color:"#0d1b2e",padding:"9px 12px",fontSize:12,fontFamily:"monospace",outline:"none",boxSizing:"border-box" as const,resize:"vertical"}}/>
+      </div>
+      {preview.length > 0 && (
+        <div style={{background:"#f0f4f8",borderRadius:8,padding:"10px 12px",fontSize:12,color:"#5a7593"}}>
+          <strong>{preview.length} lead{preview.length!==1?"s":""}</strong> encontrado{preview.length!==1?"s":""} para importar.
+          <div style={{marginTop:6,maxHeight:120,overflowY:"auto"}}>
+            {preview.slice(0,5).map((l,i)=><div key={i} style={{padding:"3px 0",borderBottom:"1px solid #e4e8f0"}}>{l.name} — {l.email}</div>)}
+            {preview.length > 5 && <div style={{color:"#1d6aff",marginTop:4}}>+{preview.length-5} mais...</div>}
+          </div>
+        </div>
+      )}
+      <button onClick={importAll} disabled={loading||preview.length===0}
+        style={{background:"#1d6aff",color:"#fff",border:"none",borderRadius:9,padding:"12px",fontSize:13,fontWeight:700,cursor:"pointer",opacity:preview.length===0?0.5:1,fontFamily:"inherit"}}>
+        {loading ? "Importando..." : `Importar ${preview.length} leads`}
+      </button>
+    </div>
+  );
+};
+
 const CRM = ({ proj, setProj, C, saveLead }) => {
   const [dragging, setDragging] = useState(null);
   const [over, setOver] = useState(null);
@@ -506,6 +643,16 @@ const CRM = ({ proj, setProj, C, saveLead }) => {
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
       {editLead && <KanbanLeadModal />}
+      {showNewLead === "new" && (
+        <Modal title="Novo Lead" onClose={()=>setShowNewLead(false)} C={C}>
+          <AddLeadForm proj={proj} setProj={setProj} C={C} saveLead={saveLead} onClose={()=>setShowNewLead(false)} />
+        </Modal>
+      )}
+      {showNewLead === "import" && (
+        <Modal title="Importar CSV" onClose={()=>setShowNewLead(false)} C={C}>
+          <ImportCSVForm proj={proj} setProj={setProj} C={C} saveLead={saveLead} onClose={()=>setShowNewLead(false)} />
+        </Modal>
+      )}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
         <div>
           <div style={{ fontSize:11, color:proj.color, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:4, fontWeight:700 }}>{proj.icon} {proj.name}</div>
@@ -1472,7 +1619,19 @@ const Sec = ({ title, C, children }) => (
 
 const HeroPanel = ({ d, u, C }) => <>
   <Sec title="Logo & Mídia" C={C}><PI C={C} label="URL do logo" value={d.logoUrl||""} onChange={v=>u("logoUrl",v)} placeholder="https://..."/><PI C={C} label="URL imagem de fundo" value={d.bgImageUrl||""} onChange={v=>u("bgImageUrl",v)} placeholder="https://..."/>{d.bgImageUrl && <><PC C={C} label="Cor do overlay" value={d.overlayColor||"#000000"} onChange={v=>u("overlayColor",v)}/><PI C={C} label="Opacidade overlay (0-100)" value={String(d.overlayOpacity||0)} onChange={v=>u("overlayOpacity",parseInt(v)||0)}/></>}</Sec><Sec title="Conteúdo" C={C}><PT C={C} label="Badge visível" value={d.badgeOn} onChange={v=>u("badgeOn",v)}/>{d.badgeOn&&<PI C={C} label="Texto do badge" value={d.badge} onChange={v=>u("badge",v)}/>}<PI C={C} label="Título" value={d.headline} onChange={v=>u("headline",v)} multiline/><PI C={C} label="Subtítulo" value={d.sub} onChange={v=>u("sub",v)} multiline/><PI C={C} label="CTA texto" value={d.cta} onChange={v=>u("cta",v)}/><PI C={C} label="CTA link" value={d.ctaUrl} onChange={v=>u("ctaUrl",v)}/></Sec>
-  <Sec title="Logo" C={C}><PI C={C} label="URL da logo" value={d.logoUrl||""} onChange={v=>u("logoUrl",v)} placeholder="https://..."/>{d.logoUrl && (
+  <Sec title="Logo" C={C}>
+    <div style={{marginBottom:10}}>
+      <label style={{fontSize:10,color:C.textSub,display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.07em",fontWeight:600}}>Upload de imagem</label>
+      {d.logoUrl && <img src={d.logoUrl} alt="logo" style={{height:40,marginBottom:8,borderRadius:6,border:`1px solid ${C.border}`,padding:4,background:C.muted}}/>}
+      <input type="file" accept="image/*" onChange={e=>{
+        const file = e.target.files?.[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => u("logoUrl", ev.target?.result as string);
+        reader.readAsDataURL(file);
+      }} style={{display:"block",fontSize:11,color:C.textSub,width:"100%",cursor:"pointer"}}/>
+      {d.logoUrl && <button onClick={()=>u("logoUrl","")} style={{marginTop:6,background:"transparent",border:`1px solid ${C.red}40`,color:C.red,borderRadius:5,padding:"3px 10px",fontSize:11,cursor:"pointer"}}>Remover logo</button>}
+    </div>{d.logoUrl && (
     <div style={{marginBottom:10}}>
       <label style={{fontSize:10,color:C.textSub,display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.07em",fontWeight:600}}>Tamanho: {Number(d.logoSize)||60}px</label>
       <input type="range" min={20} max={300} step={5}
@@ -2119,25 +2278,28 @@ export default function CRMApp({ userEmail, userName, userId }: CRMAppProps) {
   // ── Persistir projeto (criar ou atualizar) ────────────────────────────────
   const saveProject = async (proj: any) => {
     try {
-      // Só envia id se for um UUID real do banco (não IDs temporários como "proj123")
       const isRealId = proj.dbId || (proj.id && !String(proj.id).startsWith("proj") && !String(proj.id).startsWith("demo"));
+      const body = {
+        id: isRealId ? (proj.dbId || proj.id) : undefined,
+        name: proj.name,
+        description: proj.desc || "",
+        color: proj.color || "#1d6aff",
+        icon: proj.icon || "◈",
+        funnel_stages: proj.funnel || ["novo","contato","qualificado","proposta","fechado"],
+      };
       const res = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: isRealId ? (proj.dbId || proj.id) : undefined,
-          name: proj.name,
-          description: proj.desc,
-          color: proj.color,
-          icon: proj.icon,
-          funnel_stages: proj.funnel,
-        }),
+        body: JSON.stringify(body),
       });
-      if (res.ok) {
-        const { project } = await res.json();
-        return project.id;
+      const json = await res.json();
+      if (res.ok && json.project) {
+        console.log("[CRM] Projeto salvo:", json.project.id);
+        return json.project.id;
+      } else {
+        console.error("[CRM] Erro ao salvar projeto:", json);
       }
-    } catch (e) { console.error("Erro ao salvar projeto:", e); }
+    } catch (e) { console.error("[CRM] Exceção ao salvar projeto:", e); }
     return null;
   };
 
