@@ -5,11 +5,11 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const project_id = searchParams.get("project_id");
   const supabase = createClient();
-  const query = supabase.from("leads").select("*").order("created_at", { ascending: false });
+  const query = supabase.from("forms").select("*").order("created_at", { ascending: true });
   if (project_id) query.eq("project_id", project_id);
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ leads: data });
+  return NextResponse.json({ forms: data });
 }
 
 export async function POST(request: NextRequest) {
@@ -17,26 +17,18 @@ export async function POST(request: NextRequest) {
   const supabase = createClient();
   if (body.id) {
     const { data, error } = await supabase
-      .from("leads")
-      .update({
-        name: body.name, email: body.email, phone: body.phone,
-        company: body.company, tags: body.tags, score: body.score,
-        stage: body.stage, source: body.source, notes: body.notes,
-        newsletter_subscribed: body.newsletter_subscribed,
-        updated_at: new Date().toISOString(),
-      })
+      .from("forms")
+      .update({ name: body.name, fields: body.fields, tag: body.tag })
       .eq("id", body.id).select().single();
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-    return NextResponse.json({ lead: data });
+    return NextResponse.json({ form: data });
   }
-  const { data, error } = await supabase.from("leads").insert({
-    project_id: body.project_id, name: body.name, email: body.email,
-    phone: body.phone || null, company: body.company || null,
-    tags: body.tags || [], score: body.score || 40, stage: body.stage || "novo",
-    source: body.source || "Manual", newsletter_subscribed: body.newsletter_subscribed || false,
+  const { data, error } = await supabase.from("forms").insert({
+    project_id: body.project_id, name: body.name,
+    fields: body.fields || [], tag: body.tag || "",
   }).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ lead: data });
+  return NextResponse.json({ form: data });
 }
 
 export async function DELETE(request: NextRequest) {
@@ -44,7 +36,7 @@ export async function DELETE(request: NextRequest) {
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id obrigatório" }, { status: 400 });
   const supabase = createClient();
-  const { error } = await supabase.from("leads").delete().eq("id", id);
+  const { error } = await supabase.from("forms").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ ok: true });
 }

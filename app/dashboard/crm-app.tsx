@@ -546,7 +546,14 @@ const LeadsPage = ({ proj, setProj, C }) => {
             <label style={{ fontSize:11, color:C.textSub, display:"block", marginBottom:8, textTransform:"uppercase", letterSpacing:"0.07em", fontWeight:600 }}>Campos do formulário</label>
             {ffields.map((field:string, i:number) => (
               <div key={i} style={{ display:"flex", gap:6, marginBottom:5, alignItems:"center" }}>
-                <div style={{ flex:1, background:C.muted, border:`1px solid ${C.border}`, borderRadius:7, padding:"7px 10px", fontSize:13, color:C.textMid }}>{field}</div>
+                {/* Reordenar */}
+                <div style={{ display:"flex", flexDirection:"column", gap:1 }}>
+                  <button onClick={()=>{ if(i===0) return; const f=[...ffields]; [f[i-1],f[i]]=[f[i],f[i-1]]; setFfields(f); }} style={{ background:"transparent", border:"none", color:i===0?C.border:C.textSub, cursor:i===0?"default":"pointer", fontSize:10, padding:"0 2px", lineHeight:1 }}>▲</button>
+                  <button onClick={()=>{ if(i===ffields.length-1) return; const f=[...ffields]; [f[i],f[i+1]]=[f[i+1],f[i]]; setFfields(f); }} style={{ background:"transparent", border:"none", color:i===ffields.length-1?C.border:C.textSub, cursor:i===ffields.length-1?"default":"pointer", fontSize:10, padding:"0 2px", lineHeight:1 }}>▼</button>
+                </div>
+                {/* Renomear inline */}
+                <input value={field} onChange={e=>{ const f=[...ffields]; f[i]=e.target.value; setFfields(f); }}
+                  style={{ flex:1, background:C.muted, border:`1px solid ${C.border}`, borderRadius:7, padding:"7px 10px", fontSize:13, color:C.text, fontFamily:"inherit", outline:"none" }} />
                 <button onClick={()=>setFfields((p:string[])=>p.filter((_:string,idx:number)=>idx!==i))} style={{ background:"transparent", border:"none", color:C.red, cursor:"pointer", fontSize:16 }}>×</button>
               </div>
             ))}
@@ -567,7 +574,11 @@ const LeadsPage = ({ proj, setProj, C }) => {
             }));
             setShowFormEditor(null);
           }}>{isNew ? "Criar formulário" : "Salvar alterações"}</Btn>
-          {!isNew && <button onClick={()=>{ setProj((p:any)=>({...p,forms:p.forms.filter((fm:any)=>fm.id!==f.id)})); setShowFormEditor(null); }} style={{ background:"transparent", border:`1px solid ${C.red}40`, color:C.red, borderRadius:8, padding:"8px", fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>Excluir formulário</button>}
+          {!isNew && <button onClick={async()=>{
+            if(f.dbId||f.id) { try { await fetch(`/api/forms?id=${f.dbId||f.id}`,{method:"DELETE"}); } catch {} }
+            setProj((p:any)=>({...p,forms:p.forms.filter((fm:any)=>fm.id!==f.id)}));
+            setShowFormEditor(null);
+          }} style={{ background:"transparent", border:`1px solid ${C.red}40`, color:C.red, borderRadius:8, padding:"8px", fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>Excluir formulário</button>}
         </div>
       </Modal>
     );
@@ -600,12 +611,19 @@ const LeadsPage = ({ proj, setProj, C }) => {
             </div>
           </div>
           <div style={{ display:"flex", gap:8 }}>
-            <Btn C={C} sx={{ flex:1, justifyContent:"center" }} onClick={()=>{
+            <Btn C={C} sx={{ flex:1, justifyContent:"center" }} onClick={async()=>{
               const tags = tagInput.split(",").map((t:string)=>t.trim()).filter(Boolean);
-              setProj((p:any)=>({...p, leads: p.leads.map((ld:any)=>ld.id===l.id?{...ldata,tags}:ld)}));
+              const updatedLead = {...ldata, tags};
+              const projectId = proj.dbId || proj.id;
+              await saveLead({...updatedLead, dbId: l.dbId||l.id}, projectId);
+              setProj((p:any)=>({...p, leads: p.leads.map((ld:any)=>ld.id===l.id?updatedLead:ld)}));
               setEditLead(null);
             }}>Salvar</Btn>
-            <button onClick={()=>{ setProj((p:any)=>({...p,leads:p.leads.filter((ld:any)=>ld.id!==l.id)})); setEditLead(null); }}
+            <button onClick={async()=>{
+              if(l.dbId||l.id) { try { await fetch(`/api/leads?id=${l.dbId||l.id}`,{method:"DELETE"}); } catch {} }
+              setProj((p:any)=>({...p,leads:p.leads.filter((ld:any)=>ld.id!==l.id)}));
+              setEditLead(null);
+            }}
               style={{ background:"transparent", border:`1px solid ${C.red}40`, color:C.red, borderRadius:8, padding:"0 16px", fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>Excluir</button>
           </div>
         </div>
@@ -1338,7 +1356,7 @@ const Builder = ({ page, proj, onSave, onClose, saving, C }) => {
   const addBlock = type => { const nb=type==="hero"?mkHero():type==="about"?mkAbout():mkForm(proj.forms); setBlocks(p=>[...p,nb]); setSel(nb.id); setPanelTab("props"); setShowAdd(false); };
   const delBlock = id => { setBlocks(p=>p.filter(b=>b.id!==id)); if(sel===id) setSel(null); };
   const mvBlock = (id,dir) => setBlocks(prev=>{const i=prev.findIndex(b=>b.id===id),arr=[...prev];if(dir==="up"&&i===0||dir==="down"&&i===arr.length-1)return prev;const sw=dir==="up"?i-1:i+1;[arr[i],arr[sw]]=[arr[sw],arr[i]];return arr;});
-  const slug = page.title.toLowerCase().replace(/\s+/g,"-").replace(/[^a-z0-9-]/g,"");
+  const slug = (page.slug || page.title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g,"-").replace(/[^a-z0-9-]/g,""));
   const url = `${process.env.NEXT_PUBLIC_APP_URL || 'https://clubecrm.vercel.app'}/p/${proj.id}/${slug}`;
 
   return (
@@ -1809,56 +1827,108 @@ export default function CRMApp({ userEmail, userName, userId }: CRMAppProps) {
   const [theme, setTheme] = useState("light");
   const C = THEMES[theme];
 
-  const [projects, setProjects] = useState(INITIAL);
-  const [loading, setLoading] = useState(false);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [synced, setSynced] = useState(false);
 
-  // Carregar projetos do Supabase na primeira vez
+  // ── Carregar TODOS os dados do Supabase ao logar ──────────────────────────
   useEffect(() => {
-    const loadFromSupabase = async () => {
+    const loadAll = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
         const res = await fetch("/api/projects");
-        if (res.ok) {
-          const { projects: dbProjects } = await res.json();
-          if (dbProjects && dbProjects.length > 0) {
-            // Mapear projetos do banco para o formato do CRM
-            const mapped = dbProjects.map((p: any) => ({
-              id: p.id,
-              name: p.name,
-              color: p.color || "#1d6aff",
-              icon: p.icon || "◈",
-              desc: p.description || "",
-              leads: [],
-              funnel: p.funnel_stages || ["novo","contato","qualificado","proposta","fechado"],
-              forms: [],
-              newsletters: [],
-              pages: [],
-            }));
-            setProjects(mapped);
-            setActiveId(mapped[0].id);
-            // Carregar leads do primeiro projeto
-            loadLeads(mapped[0].id, mapped, setProjects);
-          }
+        if (!res.ok) throw new Error("Falha ao carregar projetos");
+        const { projects: dbProjects } = await res.json();
+
+        if (!dbProjects || dbProjects.length === 0) {
+          setProjects([]);
+          setLoading(false);
+          setSynced(true);
+          return;
         }
-        setSynced(true);
+
+        // Mapear projetos com leads e forms já incluídos
+        const mapped = await Promise.all(dbProjects.map(async (p: any) => {
+          // Carregar leads
+          let leads: any[] = [];
+          try {
+            const lr = await fetch(`/api/leads?project_id=${p.id}`);
+            if (lr.ok) {
+              const { leads: dbLeads } = await lr.json();
+              leads = (dbLeads || []).map((l: any) => ({
+                id: l.id, dbId: l.id,
+                name: l.name, email: l.email,
+                phone: l.phone || "", company: l.company || "",
+                tags: l.tags || [], score: l.score || 40,
+                stage: l.stage || "novo", source: l.source || "Manual",
+                date: l.created_at?.split("T")[0] || new Date().toISOString().split("T")[0],
+                nl: l.newsletter_subscribed || false, notes: l.notes || "",
+              }));
+            }
+          } catch {}
+
+          // Carregar formulários
+          let forms: any[] = [];
+          try {
+            const fr = await fetch(`/api/forms?project_id=${p.id}`);
+            if (fr.ok) {
+              const { forms: dbForms } = await fr.json();
+              forms = (dbForms || []).map((f: any) => ({
+                id: f.id, dbId: f.id,
+                name: f.name, fields: f.fields || [],
+                tag: f.tag || "", subs: f.submissions || 0,
+              }));
+            }
+          } catch {}
+
+          // Carregar landing pages
+          let pages: any[] = [];
+          try {
+            const pgr = await fetch(`/api/pages?project_id=${p.id}`);
+            if (pgr.ok) {
+              const { pages: dbPages } = await pgr.json();
+              pages = (dbPages || []).map((pg: any) => ({
+                id: pg.id, dbId: pg.id,
+                title: pg.title, slug: pg.slug,
+                blocks: pg.blocks || [], published: pg.published || false,
+                date: pg.created_at?.split("T")[0] || new Date().toISOString().split("T")[0],
+              }));
+            }
+          } catch {}
+
+          return {
+            id: p.id, dbId: p.id,
+            name: p.name,
+            color: p.color || "#1d6aff",
+            icon: p.icon || "◈",
+            desc: p.description || "",
+            funnel: p.funnel_stages || ["novo","contato","qualificado","proposta","fechado"],
+            scoringRules: p.scoring_rules || undefined,
+            leads, forms, pages, newsletters: [],
+          };
+        }));
+
+        setProjects(mapped);
+        setActiveId(mapped[0].id);
       } catch (e) {
-        console.log("Usando dados locais — Supabase não disponível");
-        setSynced(true);
+        console.error("Erro ao carregar dados:", e);
+        setProjects([]);
       } finally {
         setLoading(false);
+        setSynced(true);
       }
     };
-    loadFromSupabase();
+    loadAll();
   }, [userId]);
 
-  // Salvar projeto ao criar novo
+  // ── Persistir projeto (criar ou atualizar) ────────────────────────────────
   const saveProject = async (proj: any) => {
     try {
-      await fetch("/api/projects", {
+      const res = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          id: proj.dbId || proj.id || undefined,
           name: proj.name,
           description: proj.desc,
           color: proj.color,
@@ -1866,33 +1936,56 @@ export default function CRMApp({ userEmail, userName, userId }: CRMAppProps) {
           funnel_stages: proj.funnel,
         }),
       });
-    } catch (e) {
-      console.log("Erro ao salvar projeto:", e);
-    }
+      if (res.ok) {
+        const { project } = await res.json();
+        return project.id;
+      }
+    } catch (e) { console.error("Erro ao salvar projeto:", e); }
+    return null;
   };
 
-  // Salvar lead ao criar
+  // ── Persistir lead (criar ou atualizar) ───────────────────────────────────
   const saveLead = async (lead: any, projectId: string) => {
     try {
-      await fetch("/api/leads", {
+      const res = await fetch("/api/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          id: lead.dbId || undefined,
           project_id: projectId,
-          name: lead.name,
-          email: lead.email,
-          phone: lead.phone || null,
-          company: lead.company || null,
-          tags: lead.tags || [],
-          score: lead.score || 40,
-          stage: lead.stage || "novo",
-          source: lead.source || "Manual",
-          newsletter_subscribed: lead.nl || false,
+          name: lead.name, email: lead.email,
+          phone: lead.phone || null, company: lead.company || null,
+          tags: lead.tags || [], score: lead.score || 40,
+          stage: lead.stage || "novo", source: lead.source || "Manual",
+          newsletter_subscribed: lead.nl || false, notes: lead.notes || null,
         }),
       });
-    } catch (e) {
-      console.log("Erro ao salvar lead:", e);
-    }
+      if (res.ok) {
+        const { lead: saved } = await res.json();
+        return saved.id;
+      }
+    } catch (e) { console.error("Erro ao salvar lead:", e); }
+    return null;
+  };
+
+  // ── Persistir formulário ──────────────────────────────────────────────────
+  const saveForm = async (form: any, projectId: string) => {
+    try {
+      const res = await fetch("/api/forms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: form.dbId || undefined,
+          project_id: projectId,
+          name: form.name, fields: form.fields || [], tag: form.tag || "",
+        }),
+      });
+      if (res.ok) {
+        const { form: saved } = await res.json();
+        return saved.id;
+      }
+    } catch (e) { console.error("Erro ao salvar formulário:", e); }
+    return null;
   };
   const [activeId, setActiveId] = useState("clube");
   const [page, setPage] = useState("crm");
@@ -1998,10 +2091,29 @@ export default function CRMApp({ userEmail, userName, userId }: CRMAppProps) {
         </div>
       </main>
 
-      {showNewProj && <NewProject C={C} onClose={()=>setShowNewProj(false)} onCreate={p=>{setProjects(prev=>[...prev,p]);setActiveId(p.id);setPage("crm");}}/>}
+      {showNewProj && <NewProject C={C} onClose={()=>setShowNewProj(false)} onCreate={async p=>{
+        setProjects(prev=>[...prev,p]);
+        setActiveId(p.id);
+        setPage("crm");
+        const dbId = await saveProject(p);
+        if(dbId) setProjects(prev=>prev.map(x=>x.id===p.id?{...x,dbId,id:dbId}:x));
+      }}/>}
       {showEditProj && active && <EditProject proj={active} C={C} onClose={()=>setShowEditProj(false)}
-        onSave={updated=>{ setProjects(prev=>prev.map(p=>p.id===updated.id?updated:p)); setShowEditProj(false); }}
-        onDelete={id=>{ const remaining=projects.filter(p=>p.id!==id); setProjects(remaining); if(remaining.length) setActiveId(remaining[0].id); setShowEditProj(false); }}
+        onSave={async updated=>{
+          setProjects(prev=>prev.map(p=>p.id===updated.id?updated:p));
+          setShowEditProj(false);
+          await saveProject({...updated, dbId: updated.dbId||updated.id});
+        }}
+        onDelete={async id=>{
+          const proj = projects.find(p=>p.id===id);
+          const remaining=projects.filter(p=>p.id!==id);
+          setProjects(remaining);
+          if(remaining.length) setActiveId(remaining[0].id);
+          setShowEditProj(false);
+          if(proj?.dbId||proj?.id) {
+            try { await fetch(`/api/projects?id=${proj.dbId||proj.id}`,{method:"DELETE"}); } catch {}
+          }
+        }}
       />}
     </div>
   );
