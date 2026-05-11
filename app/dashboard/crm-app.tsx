@@ -445,7 +445,15 @@ const LeadsPage = ({ proj, setProj, C }) => {
   const [importResult, setImportResult] = useState(null);
   const fileRef = useRef();
 
-  const allTags = ["todos", ...Array.from(new Set(proj.leads.flatMap(l => l.tags)))];
+  const [showFormEditor, setShowFormEditor] = useState<any>(null);
+  const [editLead, setEditLead] = useState<any>(null);
+
+  // Campos customizáveis de leads
+  const leadFields = proj.leadFields || ["name","email","phone","company"];
+  const fieldLabels: Record<string,string> = { name:"Nome", email:"E-mail", phone:"Telefone", company:"Empresa", website:"Website", cpf:"CPF/CNPJ", instagram:"Instagram", linkedin:"LinkedIn", notes:"Observações" };
+  const allPossibleFields = ["name","email","phone","company","website","cpf","instagram","linkedin","notes"];
+
+  const allTags = ["todos", ...Array.from(new Set(proj.leads.flatMap((l:any) => l.tags)))];
   const filtered = proj.leads.filter(l => {
     const m = l.name.toLowerCase().includes(q.toLowerCase()) || l.email.toLowerCase().includes(q.toLowerCase()) || l.company.toLowerCase().includes(q.toLowerCase());
     return m && (ft==="todos" || l.tags.includes(ft));
@@ -520,8 +528,95 @@ const LeadsPage = ({ proj, setProj, C }) => {
 </script>
 <script src="https://seu-app.vercel.app/embed.js"></script>`;
 
+
+  // FormEditor modal
+  const FormEditorModal = () => {
+    const f = showFormEditor;
+    const isNew = !f?.id;
+    const [fname, setFname] = useState(f?.name || "");
+    const [ftag, setFtag]   = useState(f?.tag || "");
+    const [ffields, setFfields] = useState<string[]>(f?.fields || ["Nome","E-mail","Telefone"]);
+    const [nfield, setNfield] = useState("");
+    return (
+      <Modal title={isNew ? "Novo Formulário" : "Editar Formulário"} onClose={()=>setShowFormEditor(null)} C={C}>
+        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          <Inp C={C} label="Nome do formulário" value={fname} onChange={(e:any)=>setFname(e.target.value)} placeholder="Ex: Formulário Principal" />
+          <Inp C={C} label="Tag automática" value={ftag} onChange={(e:any)=>setFtag(e.target.value)} placeholder="Ex: lead-frio, evento-jan" />
+          <div>
+            <label style={{ fontSize:11, color:C.textSub, display:"block", marginBottom:8, textTransform:"uppercase", letterSpacing:"0.07em", fontWeight:600 }}>Campos do formulário</label>
+            {ffields.map((field:string, i:number) => (
+              <div key={i} style={{ display:"flex", gap:6, marginBottom:5, alignItems:"center" }}>
+                <div style={{ flex:1, background:C.muted, border:`1px solid ${C.border}`, borderRadius:7, padding:"7px 10px", fontSize:13, color:C.textMid }}>{field}</div>
+                <button onClick={()=>setFfields((p:string[])=>p.filter((_:string,idx:number)=>idx!==i))} style={{ background:"transparent", border:"none", color:C.red, cursor:"pointer", fontSize:16 }}>×</button>
+              </div>
+            ))}
+            <div style={{ display:"flex", gap:6, marginTop:4 }}>
+              <input value={nfield} onChange={e=>setNfield(e.target.value)} placeholder="Novo campo..." onKeyDown={e=>{ if(e.key==="Enter"&&nfield){ setFfields((p:string[])=>[...p,nfield]); setNfield(""); }}}
+                style={{ flex:1, background:C.muted, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"7px 10px", fontSize:13, fontFamily:"inherit", outline:"none" }} />
+              <button onClick={()=>{ if(nfield){ setFfields((p:string[])=>[...p,nfield]); setNfield(""); }}} style={{ background:C.accent, border:"none", color:"#fff", borderRadius:7, padding:"7px 14px", fontSize:12, fontWeight:700, cursor:"pointer" }}>+ Adicionar</button>
+            </div>
+          </div>
+          <Btn C={C} sx={{ width:"100%", justifyContent:"center" }} onClick={()=>{
+            if (!fname) return;
+            const updated = isNew
+              ? { id: Date.now(), name: fname, tag: ftag, fields: ffields, subs: 0 }
+              : { ...f, name: fname, tag: ftag, fields: ffields };
+            setProj((p:any) => ({
+              ...p,
+              forms: isNew ? [...p.forms, updated] : p.forms.map((fm:any) => fm.id === f.id ? updated : fm)
+            }));
+            setShowFormEditor(null);
+          }}>{isNew ? "Criar formulário" : "Salvar alterações"}</Btn>
+          {!isNew && <button onClick={()=>{ setProj((p:any)=>({...p,forms:p.forms.filter((fm:any)=>fm.id!==f.id)})); setShowFormEditor(null); }} style={{ background:"transparent", border:`1px solid ${C.red}40`, color:C.red, borderRadius:8, padding:"8px", fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>Excluir formulário</button>}
+        </div>
+      </Modal>
+    );
+  };
+
+  // LeadEditor modal
+  const LeadEditorModal = () => {
+    const l = editLead;
+    const [ldata, setLdata] = useState({ ...l });
+    const [tagInput, setTagInput] = useState(l.tags?.join(", ") || "");
+    return (
+      <Modal title="Editar Lead" onClose={()=>setEditLead(null)} C={C}>
+        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+          {allPossibleFields.filter((f:string) => leadFields.includes(f) || ["name","email"].includes(f)).map((field:string) => (
+            <Inp key={field} C={C} label={fieldLabels[field] || field} value={ldata[field] || ""} onChange={(e:any)=>setLdata((p:any)=>({...p,[field]:e.target.value}))} />
+          ))}
+          <Inp C={C} label="Tags (separadas por vírgula)" value={tagInput} onChange={(e:any)=>setTagInput(e.target.value)} placeholder="quente, empresa, vip" />
+          <div style={{ display:"flex", gap:8 }}>
+            <div style={{ flex:1 }}>
+              <label style={{ fontSize:11, color:C.textSub, display:"block", marginBottom:5 }}>Etapa</label>
+              <select value={ldata.stage} onChange={e=>setLdata((p:any)=>({...p,stage:e.target.value}))}
+                style={{ width:"100%", background:C.muted, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"8px 10px", fontSize:13, fontFamily:"inherit", outline:"none" }}>
+                {proj.funnel.map((s:string)=><option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div style={{ flex:1 }}>
+              <label style={{ fontSize:11, color:C.textSub, display:"block", marginBottom:5 }}>Score (0-100)</label>
+              <input type="number" min={0} max={100} value={ldata.score} onChange={e=>setLdata((p:any)=>({...p,score:parseInt(e.target.value)||0}))}
+                style={{ width:"100%", background:C.muted, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"8px 10px", fontSize:13, fontFamily:"inherit", outline:"none", boxSizing:"border-box" }} />
+            </div>
+          </div>
+          <div style={{ display:"flex", gap:8 }}>
+            <Btn C={C} sx={{ flex:1, justifyContent:"center" }} onClick={()=>{
+              const tags = tagInput.split(",").map((t:string)=>t.trim()).filter(Boolean);
+              setProj((p:any)=>({...p, leads: p.leads.map((ld:any)=>ld.id===l.id?{...ldata,tags}:ld)}));
+              setEditLead(null);
+            }}>Salvar</Btn>
+            <button onClick={()=>{ setProj((p:any)=>({...p,leads:p.leads.filter((ld:any)=>ld.id!==l.id)})); setEditLead(null); }}
+              style={{ background:"transparent", border:`1px solid ${C.red}40`, color:C.red, borderRadius:8, padding:"0 16px", fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>Excluir</button>
+          </div>
+        </div>
+      </Modal>
+    );
+  };
+
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+      {showFormEditor && <FormEditorModal />}
+      {editLead && <LeadEditorModal />}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
         <div>
           <div style={{ fontSize:11, color:proj.color, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:4, fontWeight:700 }}>{proj.icon} {proj.name}</div>
@@ -531,14 +626,14 @@ const LeadsPage = ({ proj, setProj, C }) => {
         <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
           <Btn C={C} v="ghost" icon="upload" onClick={() => setShowImport(true)}>Importar</Btn>
           <Btn C={C} v="ghost" icon="download" onClick={exportLeads}>Exportar</Btn>
-          <Btn C={C} v="ghost" icon="folder" onClick={() => setShowForm(proj.forms[0])}>Formulários</Btn>
+          <Btn C={C} v="ghost" icon="plus" onClick={() => setShowFormEditor({})}>Novo formulário</Btn>
           <Btn C={C} icon="plus" onClick={() => setShowNew(true)}>Novo Lead</Btn>
         </div>
       </div>
 
       {/* Forms strip */}
       <div style={{ display:"flex", gap:9, flexWrap:"wrap" }}>
-        {proj.forms.map(f => (
+        {proj.forms.map(f => (<div key={f.id} onClick={()=>setShowFormEditor(f)} style={{cursor:"pointer"}}>
           <div key={f.id} onClick={() => setShowForm(f)}
             style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:10, padding:"11px 15px", cursor:"pointer", display:"flex", gap:12, alignItems:"center", flex:1, minWidth:220, boxShadow:C.shadowCard, transition:"border-color 0.15s" }}
             onMouseEnter={e => e.currentTarget.style.borderColor=C.accent}
@@ -623,7 +718,7 @@ const LeadsPage = ({ proj, setProj, C }) => {
               <div style={{ fontSize:13, fontWeight:800, color:C.text, marginBottom:14 }}>📤 Exportar</div>
               <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
                 {[
-                  { label:"Exportar todos os leads", sub:`${proj.leads.length} leads com todos os campos`, icon:"download", action:exportLeads },
+            </div>))}      { label:"Exportar todos os leads", sub:`${proj.leads.length} leads com todos os campos`, icon:"download", action:exportLeads },
                   { label:"Exportar leads filtrados", sub:`${filtered.length} lead${filtered.length!==1?"s":""} do filtro atual`, icon:"download", action:() => { const rows=filtered.map(l=>({...l,tags:l.tags.join(";")})); downloadCSV(toCSV(rows,["name","email","phone","company","tags","score","stage","source","date"]),`leads-filtrados-${proj.id}.csv`); } },
                   { label:"Baixar template de importação", sub:"Planilha formatada para preenchimento", icon:"download", action:exportFunnel },
                 ].map(item => (
@@ -994,8 +1089,32 @@ const EmailPage = ({ proj, setProj, C }) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // SCORING PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
-const ScoringPage = ({ proj, C }) => {
+const ScoringPage = ({ proj, setProj, C }) => {
   const sorted = [...proj.leads].sort((a,b) => b.score-a.score);
+  const rules = proj.scoringRules || [
+    { id:1, label:"Preencher formulário", points:10 },
+    { id:2, label:"Abrir e-mail", points:5 },
+    { id:3, label:"Clicar em link", points:8 },
+    { id:4, label:"Tag empresário/aplicante", points:15 },
+    { id:5, label:"Participar de evento", points:20 },
+    { id:6, label:"Sem interação 15 dias", points:-10 },
+    { id:7, label:"Descadastro newsletter", points:-20 },
+  ];
+  const [showNewRule, setShowNewRule] = useState(false);
+  const [newRule, setNewRule] = useState({ label:"", points:10 });
+
+  const saveRules = (updatedRules: any[]) => {
+    setProj((p: any) => ({ ...p, scoringRules: updatedRules }));
+  };
+  const deleteRule = (id: number) => saveRules(rules.filter(r => r.id !== id));
+  const addRule = () => {
+    if (!newRule.label) return;
+    saveRules([...rules, { ...newRule, id: Date.now() }]);
+    setNewRule({ label:"", points:10 }); setShowNewRule(false);
+  };
+  const updatePoints = (id: number, points: number) => {
+    saveRules(rules.map(r => r.id === id ? { ...r, points } : r));
+  };
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
       <div>
@@ -1023,14 +1142,30 @@ const ScoringPage = ({ proj, C }) => {
           <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:20, flex:1, boxShadow:C.shadowCard }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:13 }}>
               <div style={{ fontSize:11, fontWeight:700, color:C.textSub, textTransform:"uppercase", letterSpacing:"0.07em" }}>Regras</div>
-              <Btn C={C} v="ghost" small icon="plus">Adicionar</Btn>
+              <Btn C={C} v="ghost" small icon="plus" onClick={()=>setShowNewRule(r=>!r)}>Adicionar</Btn>
             </div>
-            {[["Preencher formulário","+10"],["Abrir e-mail","+5"],["Clicar em link","+8"],["Tag empresário/aplicante","+15"],["Participar de evento","+20"],["Sem interação 15 dias","−10"],["Descadastro newsletter","−20"]].map(([l,p]) => (
-              <div key={l} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 11px", background:C.muted, borderRadius:7, marginBottom:5 }}>
-                <div style={{ display:"flex", gap:7, alignItems:"center" }}><div style={{ width:5, height:5, borderRadius:"50%", background:C.green }} /><span style={{ fontSize:12, color:C.textMid }}>{l}</span></div>
-                <span style={{ fontSize:12, fontWeight:800, color:p.startsWith("+")?C.green:C.red, fontFamily:"monospace" }}>{p}</span>
+            {rules.map(r => (
+              <div key={r.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 11px", background:C.muted, borderRadius:7, marginBottom:5 }}>
+                <div style={{ display:"flex", gap:7, alignItems:"center", flex:1 }}>
+                  <div style={{ width:5, height:5, borderRadius:"50%", background:r.points>0?C.green:C.red }} />
+                  <span style={{ fontSize:12, color:C.textMid, flex:1 }}>{r.label}</span>
+                </div>
+                <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                  <input type="number" value={r.points} onChange={e=>updatePoints(r.id, parseInt(e.target.value)||0)}
+                    style={{ width:54, background:C.surface, border:`1px solid ${C.border}`, borderRadius:5, color:r.points>0?C.green:C.red, padding:"3px 6px", fontSize:12, fontWeight:800, textAlign:"center", fontFamily:"monospace", outline:"none" }} />
+                  <button onClick={()=>deleteRule(r.id)} style={{ background:"transparent", border:"none", color:C.red, cursor:"pointer", fontSize:14, padding:"0 2px" }}>×</button>
+                </div>
               </div>
             ))}
+            {showNewRule && (
+              <div style={{ display:"flex", gap:6, marginTop:6 }}>
+                <input value={newRule.label} onChange={e=>setNewRule(r=>({...r,label:e.target.value}))} placeholder="Nome da regra"
+                  style={{ flex:1, background:C.surface, border:`1px solid ${C.border}`, borderRadius:6, color:C.text, padding:"6px 9px", fontSize:12, fontFamily:"inherit", outline:"none" }} />
+                <input type="number" value={newRule.points} onChange={e=>setNewRule(r=>({...r,points:parseInt(e.target.value)||0}))}
+                  style={{ width:54, background:C.surface, border:`1px solid ${C.border}`, borderRadius:6, color:C.text, padding:"6px 9px", fontSize:12, textAlign:"center", fontFamily:"monospace", outline:"none" }} />
+                <button onClick={addRule} style={{ background:C.accent, border:"none", color:"#fff", borderRadius:6, padding:"6px 12px", fontSize:12, fontWeight:700, cursor:"pointer" }}>OK</button>
+              </div>
+            )}
           </div>
           <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:18, boxShadow:C.shadowCard }}>
             <div style={{ fontSize:11, fontWeight:700, color:C.textSub, marginBottom:11, textTransform:"uppercase", letterSpacing:"0.07em" }}>Automações por score</div>
@@ -1389,6 +1524,128 @@ const LandingPages = ({ proj, setProj, C }) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // NEW PROJECT MODAL
 // ═══════════════════════════════════════════════════════════════════════════════
+
+
+const TeamPage = ({ C, userEmail }) => {
+  const [members, setMembers] = useState<any[]>([]);
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState("membro");
+  const [msg, setMsg] = useState<{ok:boolean,text:string}|null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const invite = async () => {
+    if (!email || !/\S+@\S+\.\S+/.test(email)) { setMsg({ok:false,text:"E-mail inválido."}); return; }
+    setLoading(true);
+    // Por ora, salva localmente — integração com convites reais via Supabase em breve
+    setMembers(prev => [...prev, { id: Date.now(), email, role, status: "convidado" }]);
+    setMsg({ok:true, text:`Convite enviado para ${email}`});
+    setEmail(""); setLoading(false);
+    setTimeout(() => setMsg(null), 3000);
+  };
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+      <div>
+        <h1 style={{ fontSize:27, fontWeight:900, color:C.text, margin:"0 0 4px", letterSpacing:"-0.03em" }}>Equipe</h1>
+        <p style={{ color:C.textSub, fontSize:13, margin:0 }}>Gerencie os membros que têm acesso ao painel.</p>
+      </div>
+
+      {/* Convidar membro */}
+      <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:20, boxShadow:C.shadowCard }}>
+        <div style={{ fontSize:12, fontWeight:700, color:C.textSub, textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:14 }}>Convidar membro</div>
+        <div style={{ display:"flex", gap:10 }}>
+          <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="email@empresa.com"
+            style={{ flex:1, background:C.muted, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"9px 12px", fontSize:13, outline:"none", fontFamily:"inherit" }} />
+          <select value={role} onChange={e=>setRole(e.target.value)}
+            style={{ background:C.muted, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"9px 12px", fontSize:13, fontFamily:"inherit", outline:"none" }}>
+            <option value="admin">Admin</option>
+            <option value="membro">Membro</option>
+            <option value="visualizador">Visualizador</option>
+          </select>
+          <Btn C={C} onClick={invite} disabled={loading}>{loading ? "Enviando..." : "Convidar"}</Btn>
+        </div>
+        {msg && <div style={{ marginTop:10, padding:"9px 12px", background:msg.ok?C.greenSoft:C.redSoft, border:`1px solid ${msg.ok?C.green:C.red}30`, borderRadius:7, fontSize:13, color:msg.ok?C.green:C.red }}>{msg.text}</div>}
+      </div>
+
+      {/* Lista de membros */}
+      <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:20, boxShadow:C.shadowCard }}>
+        <div style={{ fontSize:12, fontWeight:700, color:C.textSub, textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:14 }}>Membros ativos</div>
+        {/* Dono da conta sempre aparece */}
+        <div style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 0", borderBottom:`1px solid ${C.border}` }}>
+          <div style={{ width:34, height:34, borderRadius:10, background:`linear-gradient(135deg,#1d6aff,#5b21b6)`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:900, color:"#fff" }}>{(userEmail?.[0]||"U").toUpperCase()}</div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:13, fontWeight:700, color:C.text }}>{userEmail}</div>
+            <div style={{ fontSize:11, color:C.textSub }}>Proprietário · Você</div>
+          </div>
+          <span style={{ fontSize:11, padding:"3px 9px", borderRadius:20, background:C.accentSoft, color:C.accent, fontWeight:700 }}>Owner</span>
+        </div>
+        {members.map(m => (
+          <div key={m.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 0", borderBottom:`1px solid ${C.border}` }}>
+            <div style={{ width:34, height:34, borderRadius:10, background:C.muted, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:900, color:C.textMid }}>{m.email[0].toUpperCase()}</div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:C.text }}>{m.email}</div>
+              <div style={{ fontSize:11, color:C.textSub }}>{m.role} · {m.status}</div>
+            </div>
+            <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+              <span style={{ fontSize:11, padding:"3px 9px", borderRadius:20, background:C.amberSoft, color:C.amber, fontWeight:700 }}>{m.status}</span>
+              <button onClick={()=>setMembers(p=>p.filter(x=>x.id!==m.id))} style={{ background:"transparent", border:"none", color:C.red, cursor:"pointer", fontSize:16, padding:"2px 6px" }}>×</button>
+            </div>
+          </div>
+        ))}
+        {members.length === 0 && (
+          <div style={{ padding:"20px 0", textAlign:"center", color:C.textSub, fontSize:13 }}>Nenhum membro convidado ainda.</div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const EditProject = ({ proj, onClose, onSave, onDelete, C }) => {
+  const [name, setName] = useState(proj.name);
+  const [desc, setDesc]   = useState(proj.desc || "");
+  const [color, setColor] = useState(proj.color || "#1d6aff");
+  const [icon, setIcon]   = useState(proj.icon || "◈");
+  const [funnel, setFunnel] = useState(proj.funnel.join(", "));
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const COLS  = ["#1d6aff","#7c5cfc","#0fb981","#f0a500","#e84040","#0ecbca","#e07020"];
+  const ICONS = ["◈","◆","◉","✦","◐","●","▲"];
+  return (
+    <Modal title="Editar Projeto" onClose={onClose} C={C}>
+      <div style={{ display:"flex", flexDirection:"column" }}>
+        <Inp C={C} label="Nome *" value={name} onChange={e=>setName(e.target.value)} placeholder="Nome do projeto" />
+        <Txa C={C} label="Descrição" value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Objetivo do projeto..." style={{ minHeight:60 }} />
+        <Inp C={C} label="Etapas do funil (separadas por vírgula)" value={funnel} onChange={e=>setFunnel(e.target.value)} placeholder="novo, contato, qualificado, proposta, fechado" />
+        <div style={{ marginBottom:14 }}>
+          <label style={{ fontSize:11, color:C.textSub, display:"block", marginBottom:8, textTransform:"uppercase", letterSpacing:"0.07em", fontWeight:600 }}>Cor</label>
+          <div style={{ display:"flex", gap:7 }}>{COLS.map(c=><button key={c} onClick={()=>setColor(c)} style={{ width:28,height:28,borderRadius:7,background:c,border:c===color?"3px solid "+C.text:"3px solid transparent",cursor:"pointer" }}/>)}</div>
+        </div>
+        <div style={{ marginBottom:16 }}>
+          <label style={{ fontSize:11, color:C.textSub, display:"block", marginBottom:8, textTransform:"uppercase", letterSpacing:"0.07em", fontWeight:600 }}>Ícone</label>
+          <div style={{ display:"flex", gap:7 }}>{ICONS.map(ic=><button key={ic} onClick={()=>setIcon(ic)} style={{ width:36,height:36,borderRadius:7,background:ic===icon?`${color}20`:C.muted,border:`1.5px solid ${ic===icon?color:C.border}`,color:ic===icon?color:C.textMid,fontSize:18,cursor:"pointer" }}>{ic}</button>)}</div>
+        </div>
+        <div style={{ display:"flex", gap:8, marginBottom:8 }}>
+          <Btn C={C} sx={{ flex:1, justifyContent:"center" }} onClick={()=>{
+            if(!name) return;
+            const newFunnel = funnel.split(",").map(s=>s.trim().toLowerCase()).filter(Boolean);
+            onSave({ ...proj, name, desc, color, icon, funnel: newFunnel.length ? newFunnel : proj.funnel });
+            onClose();
+          }}>Salvar alterações</Btn>
+        </div>
+        {!confirmDelete
+          ? <button onClick={()=>setConfirmDelete(true)} style={{ background:"transparent", border:`1px solid ${C.red}40`, color:C.red, borderRadius:8, padding:"9px", fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>Excluir projeto...</button>
+          : <div style={{ background:C.redSoft, border:`1px solid ${C.red}30`, borderRadius:8, padding:12 }}>
+              <p style={{ fontSize:13, color:C.red, margin:"0 0 10px" }}>Tem certeza? Esta ação não pode ser desfeita. Todos os leads deste projeto serão excluídos.</p>
+              <div style={{ display:"flex", gap:8 }}>
+                <button onClick={()=>setConfirmDelete(false)} style={{ flex:1, background:C.muted, border:`1px solid ${C.border}`, color:C.textMid, borderRadius:7, padding:"8px", fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>Cancelar</button>
+                <button onClick={()=>{ onDelete(proj.id); onClose(); }} style={{ flex:1, background:C.red, border:"none", color:"#fff", borderRadius:7, padding:"8px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Confirmar exclusão</button>
+              </div>
+            </div>
+        }
+      </div>
+    </Modal>
+  );
+};
+
 const NewProject = ({ onClose, onCreate, C }) => {
   const [name, setName] = useState(""); const [desc, setDesc] = useState("");
   const [color, setColor] = useState("#1d6aff"); const [icon, setIcon] = useState("◈");
@@ -1548,9 +1805,10 @@ export default function CRMApp({ userEmail, userName, userId }: CRMAppProps) {
     }
   };
   const [activeId, setActiveId] = useState("clube");
-  const [page, setPage] = useState("global");
+  const [page, setPage] = useState("crm");
   const [collapsed, setCollapsed] = useState(false);
   const [showNewProj, setShowNewProj] = useState(false);
+  const [showEditProj, setShowEditProj] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => { setTimeout(() => setMounted(true), 80); }, []);
@@ -1558,7 +1816,9 @@ export default function CRMApp({ userEmail, userName, userId }: CRMAppProps) {
   const active = projects.find(p => p.id===activeId) || projects[0];
   const setActive = fn => setProjects(prev => prev.map(p => p.id===activeId ? (typeof fn==="function"?fn(p):fn) : p));
 
-  const NAV_GLOBAL = [{ id:"global", label:"Visão Global", icon:"grid" }];
+  const NAV_ACCOUNT = [
+    { id:"team", label:"Equipe", icon:"user" },
+  ];
   const NAV_PROJ = [
     { id:"crm", label:"Funil de Vendas", icon:"crm" },
     { id:"leads", label:"Leads & Captura", icon:"leads" },
@@ -1568,11 +1828,11 @@ export default function CRMApp({ userEmail, userName, userId }: CRMAppProps) {
   ];
 
   const renderPage = () => {
-    if (page==="global") return <GlobalDashboard projects={projects} C={C}/>;
+    if (page==="team") return <TeamPage C={C} userEmail={userEmail}/>;
     if (page==="crm") return <CRM proj={active} setProj={setActive} C={C}/>;
     if (page==="leads") return <LeadsPage proj={active} setProj={setActive} C={C}/>;
     if (page==="email") return <EmailPage proj={active} setProj={setActive} C={C}/>;
-    if (page==="scoring") return <ScoringPage proj={active} C={C}/>;
+    if (page==="scoring") return <ScoringPage proj={active} setProj={setActive} C={C}/>;
     if (page==="pages") return <LandingPages proj={active} setProj={setActive} C={C}/>;
   };
 
@@ -1597,15 +1857,16 @@ export default function CRMApp({ userEmail, userName, userId }: CRMAppProps) {
           <div style={{ padding:"10px 9px", borderBottom:`1px solid ${C.border}`, flexShrink:0 }}>
             <div style={{ fontSize:9,color:C.textSub,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:7,paddingLeft:3,fontWeight:700 }}>Projeto ativo</div>
             <ProjectSelector projects={projects} activeId={activeId} C={C}
-              onChange={id => { setActiveId(id); if(page==="global") setPage("crm"); }}
+              onChange={id => { setActiveId(id); if(page==="team") setPage("crm"); }}
               onNew={() => setShowNewProj(true)} />
+            <button onClick={()=>setShowEditProj(true)} style={{ width:"100%", marginTop:5, background:"transparent", border:`1px solid ${C.border}`, borderRadius:8, color:C.textSub, padding:"6px 10px", fontSize:11, cursor:"pointer", fontFamily:"inherit", textAlign:"left" }}>⚙ Editar projeto</button>
           </div>
         )}
 
         {/* Nav */}
         <nav style={{ flex:1, padding:"8px 6px", display:"flex", flexDirection:"column", gap:1, overflowY:"auto", minHeight:0 }}>
           {!collapsed && <div style={{ fontSize:9,color:C.textSub,letterSpacing:"0.1em",textTransform:"uppercase",padding:"6px 6px 3px",fontWeight:700 }}>Geral</div>}
-          {NAV_GLOBAL.map(item => {
+          {NAV_ACCOUNT.map(item => {
             const isActive=page===item.id;
             return <button key={item.id} onClick={()=>setPage(item.id)} title={collapsed?item.label:undefined}
               style={{ display:"flex",alignItems:"center",gap:9,padding:collapsed?"8px 0":"8px 10px",borderRadius:8,border:"none",background:isActive?C.accentSoft:"transparent",color:isActive?C.accent:C.textSub,cursor:"pointer",width:"100%",justifyContent:collapsed?"center":"flex-start",position:"relative",fontFamily:"inherit" }}>
@@ -1648,6 +1909,10 @@ export default function CRMApp({ userEmail, userName, userId }: CRMAppProps) {
       </main>
 
       {showNewProj && <NewProject C={C} onClose={()=>setShowNewProj(false)} onCreate={p=>{setProjects(prev=>[...prev,p]);setActiveId(p.id);setPage("crm");}}/>}
+      {showEditProj && active && <EditProject proj={active} C={C} onClose={()=>setShowEditProj(false)}
+        onSave={updated=>{ setProjects(prev=>prev.map(p=>p.id===updated.id?updated:p)); setShowEditProj(false); }}
+        onDelete={id=>{ const remaining=projects.filter(p=>p.id!==id); setProjects(remaining); if(remaining.length) setActiveId(remaining[0].id); setShowEditProj(false); }}
+      />}
     </div>
   );
 }
