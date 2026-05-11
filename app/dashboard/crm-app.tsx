@@ -563,14 +563,17 @@ const LeadsPage = ({ proj, setProj, C }) => {
               <button onClick={()=>{ if(nfield){ setFfields((p:string[])=>[...p,nfield]); setNfield(""); }}} style={{ background:C.accent, border:"none", color:"#fff", borderRadius:7, padding:"7px 14px", fontSize:12, fontWeight:700, cursor:"pointer" }}>+ Adicionar</button>
             </div>
           </div>
-          <Btn C={C} sx={{ width:"100%", justifyContent:"center" }} onClick={()=>{
+          <Btn C={C} sx={{ width:"100%", justifyContent:"center" }} onClick={async()=>{
             if (!fname) return;
+            const projectId = proj.dbId || proj.id;
             const updated = isNew
-              ? { id: Date.now(), name: fname, tag: ftag, fields: ffields, subs: 0 }
+              ? { id: "f"+Date.now(), name: fname, tag: ftag, fields: ffields, subs: 0 }
               : { ...f, name: fname, tag: ftag, fields: ffields };
+            const dbId = await saveForm(updated, projectId);
+            const withDb = dbId ? { ...updated, dbId, id: dbId } : updated;
             setProj((p:any) => ({
               ...p,
-              forms: isNew ? [...p.forms, updated] : p.forms.map((fm:any) => fm.id === f.id ? updated : fm)
+              forms: isNew ? [...p.forms, withDb] : p.forms.map((fm:any) => fm.id === f.id ? withDb : fm)
             }));
             setShowFormEditor(null);
           }}>{isNew ? "Criar formulário" : "Salvar alterações"}</Btn>
@@ -1307,7 +1310,7 @@ const Sec = ({ title, C, children }) => (
 
 const HeroPanel = ({ d, u, C }) => <>
   <Sec title="Logo & Mídia" C={C}><PI C={C} label="URL do logo" value={d.logoUrl||""} onChange={v=>u("logoUrl",v)} placeholder="https://..."/><PI C={C} label="URL imagem de fundo" value={d.bgImageUrl||""} onChange={v=>u("bgImageUrl",v)} placeholder="https://..."/>{d.bgImageUrl && <><PC C={C} label="Cor do overlay" value={d.overlayColor||"#000000"} onChange={v=>u("overlayColor",v)}/><PI C={C} label="Opacidade overlay (0-100)" value={String(d.overlayOpacity||0)} onChange={v=>u("overlayOpacity",parseInt(v)||0)}/></>}</Sec><Sec title="Conteúdo" C={C}><PT C={C} label="Badge visível" value={d.badgeOn} onChange={v=>u("badgeOn",v)}/>{d.badgeOn&&<PI C={C} label="Texto do badge" value={d.badge} onChange={v=>u("badge",v)}/>}<PI C={C} label="Título" value={d.headline} onChange={v=>u("headline",v)} multiline/><PI C={C} label="Subtítulo" value={d.sub} onChange={v=>u("sub",v)} multiline/><PI C={C} label="CTA texto" value={d.cta} onChange={v=>u("cta",v)}/><PI C={C} label="CTA link" value={d.ctaUrl} onChange={v=>u("ctaUrl",v)}/></Sec>
-  <Sec title="Logo" C={C}><PI C={C} label="URL da logo" value={d.logoUrl||""} onChange={v=>u("logoUrl",v)} placeholder="https://..."/>{d.logoUrl&&<div style={{marginBottom:8}}><label style={{fontSize:10,color:C.textSub,display:"block",marginBottom:4,textTransform:"uppercase",letterSpacing:"0.07em",fontWeight:600}}>Tamanho (px)</label><input type="range" min={30} max={200} value={d.logoSize||60} onChange={e=>u("logoSize",parseInt(e.target.value))} style={{width:"100%"}}/><span style={{fontSize:10,color:C.textSub}}>{d.logoSize||60}px</span></div>}</Sec>
+  <Sec title="Logo" C={C}><PI C={C} label="URL da logo" value={d.logoUrl||""} onChange={v=>u("logoUrl",v)} placeholder="https://..."/>{d.logoUrl&&<div style={{marginBottom:8}}><label style={{fontSize:10,color:C.textSub,display:"block",marginBottom:4,textTransform:"uppercase",letterSpacing:"0.07em",fontWeight:600}}>Tamanho (px)</label><input type="range" min={30} max={200} value={d.logoSize||60} onChange={e=>u("logoSize",Number(e.target.value))} style={{width:"100%"}}/><span style={{fontSize:10,color:C.textSub}}>{d.logoSize||60}px</span></div>}</Sec>
   <Sec title="Imagem de fundo" C={C}><PI C={C} label="URL da imagem" value={d.bgImage||""} onChange={v=>u("bgImage",v)} placeholder="https://..."/><PT C={C} label="Overlay ativo" value={d.bgOverlayOn||false} onChange={v=>u("bgOverlayOn",v)}/>{d.bgOverlayOn&&<PC C={C} label="Cor do overlay" value={d.bgOverlay||"#00000060"} onChange={v=>u("bgOverlay",v)}/>}</Sec>
   <Sec title="Estilo" C={C}><PS C={C} label="Alinhamento" value={d.align} onChange={v=>u("align",v)} opts={[{v:"center",l:"Centralizado"},{v:"left",l:"Esquerda"}]}/><PS C={C} label="Fundo" value={d.bgStyle} onChange={v=>u("bgStyle",v)} opts={[{v:"gradient",l:"Gradiente"},{v:"solid",l:"Sólido"}]}/><PC C={C} label="Cor fundo" value={d.bg} onChange={v=>u("bg",v)}/><PC C={C} label="Título" value={d.headC} onChange={v=>u("headC",v)}/><PC C={C} label="Subtítulo" value={d.subC} onChange={v=>u("subC",v)}/><PC C={C} label="Destaque" value={d.accent} onChange={v=>u("accent",v)}/></Sec>
 </>;
@@ -2006,10 +2009,43 @@ export default function CRMApp({ userEmail, userName, userId }: CRMAppProps) {
         <div style={{ fontSize:48, marginBottom:16 }}>◈</div>
         <h2 style={{ fontSize:22, fontWeight:900, color:"#0d1b2e", marginBottom:8 }}>Bem-vindo ao ClubeCRM!</h2>
         <p style={{ fontSize:14, color:"#6b7f99", marginBottom:24 }}>Crie seu primeiro projeto para começar.</p>
-        <button onClick={()=>setShowNewProj(true)}
-          style={{ background:"#1d6aff", color:"#fff", border:"none", borderRadius:10, padding:"12px 24px", fontSize:14, fontWeight:700, cursor:"pointer" }}>
-          + Criar primeiro projeto
-        </button>
+        <div style={{ display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap" }}>
+          <button onClick={async()=>{
+            // Criar projeto demo automático
+            const demo = {
+              id: "demo-"+Date.now(),
+              name: "Meu Primeiro Projeto",
+              desc: "Projeto de demonstração do ClubeCRM",
+              color: "#1d6aff", icon: "◈",
+              funnel: ["novo","contato","qualificado","proposta","fechado"],
+              leads: [
+                { id:"l1", name:"Maria Silva", email:"maria@exemplo.com", phone:"(11) 99999-0001", company:"Empresa A", tags:["quente"], score:85, stage:"qualificado", source:"Formulário", date:new Date().toISOString().split("T")[0], nl:true },
+                { id:"l2", name:"João Santos", email:"joao@exemplo.com", phone:"(11) 99999-0002", company:"Empresa B", tags:["frio"], score:40, stage:"novo", source:"Manual", date:new Date().toISOString().split("T")[0], nl:false },
+                { id:"l3", name:"Ana Costa", email:"ana@exemplo.com", phone:"(11) 99999-0003", company:"Empresa C", tags:["vip","quente"], score:92, stage:"proposta", source:"Indicação", date:new Date().toISOString().split("T")[0], nl:true },
+              ],
+              forms: [{ id:"f1", name:"Formulário Principal", fields:["Nome completo","E-mail","Telefone","Empresa"], tag:"lead-demo", subs:3 }],
+              newsletters: [], pages: [],
+            };
+            setProjects([demo]);
+            setActiveId(demo.id);
+            // Salvar no banco
+            const dbId = await saveProject(demo);
+            if(dbId) {
+              setProjects(prev=>prev.map(x=>x.id===demo.id?{...x,dbId,id:dbId}:x));
+              setActiveId(dbId);
+              // Salvar leads demo
+              for(const lead of demo.leads) {
+                await saveLead(lead, dbId);
+              }
+            }
+          }} style={{ background:"#1d6aff", color:"#fff", border:"none", borderRadius:10, padding:"12px 24px", fontSize:14, fontWeight:700, cursor:"pointer" }}>
+            ✦ Criar projeto com dados demo
+          </button>
+          <button onClick={()=>setShowNewProj(true)}
+            style={{ background:"transparent", color:"#1d6aff", border:"1.5px solid #1d6aff", borderRadius:10, padding:"12px 24px", fontSize:14, fontWeight:700, cursor:"pointer" }}>
+            + Criar projeto em branco
+          </button>
+        </div>
         {showNewProj && <NewProject C={C} onClose={()=>setShowNewProj(false)} onCreate={async p=>{
           setProjects([p]);
           setActiveId(p.id);
