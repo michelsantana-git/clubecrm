@@ -1996,8 +1996,32 @@ export default function CRMApp({ userEmail, userName, userId }: CRMAppProps) {
 
   useEffect(() => { setTimeout(() => setMounted(true), 80); }, []);
 
-  const active = projects.find(p => p.id===activeId) || projects[0];
+  const active = projects.find(p => p.id===activeId) || projects[0] || null;
   const setActive = fn => setProjects(prev => prev.map(p => p.id===activeId ? (typeof fn==="function"?fn(p):fn) : p));
+
+  // Aguardar dados carregarem antes de renderizar a sidebar
+  if (!active && !loading) return (
+    <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100vh", background:"#f0f4f8", fontFamily:"sans-serif" }}>
+      <div style={{ textAlign:"center", maxWidth:400 }}>
+        <div style={{ fontSize:48, marginBottom:16 }}>◈</div>
+        <h2 style={{ fontSize:22, fontWeight:900, color:"#0d1b2e", marginBottom:8 }}>Bem-vindo ao ClubeCRM!</h2>
+        <p style={{ fontSize:14, color:"#6b7f99", marginBottom:24 }}>Crie seu primeiro projeto para começar.</p>
+        <button onClick={()=>setShowNewProj(true)}
+          style={{ background:"#1d6aff", color:"#fff", border:"none", borderRadius:10, padding:"12px 24px", fontSize:14, fontWeight:700, cursor:"pointer" }}>
+          + Criar primeiro projeto
+        </button>
+        {showNewProj && <NewProject C={C} onClose={()=>setShowNewProj(false)} onCreate={async p=>{
+          setProjects([p]);
+          setActiveId(p.id);
+          const dbId = await saveProject(p);
+          if(dbId) setProjects(prev=>prev.map(x=>x.id===p.id?{...x,dbId,id:dbId}:x));
+          setShowNewProj(false);
+        }}/>}
+      </div>
+    </div>
+  );
+
+  if (!active) return null;
 
   const NAV_ACCOUNT = [
     { id:"team", label:"Equipe", icon:"user" },
