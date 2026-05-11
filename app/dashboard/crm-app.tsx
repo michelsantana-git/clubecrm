@@ -1608,19 +1608,37 @@ const TemplatePicker = ({ proj, onClose, onCreate, C }) => {
   );
 };
 
-const LandingPages = ({ proj, setProj, C, savePage }) => {
+const LandingPages = ({ proj, setProj, C }) => {
   const [editing, setEditing] = useState(null);
   const [showPicker, setShowPicker] = useState(false);
   const [saving, setSaving] = useState(false);
   const pages = proj.pages || [];
   const slug = t => t.toLowerCase().replace(/\s+/g,"-").replace(/[^a-z0-9-]/g,"");
 
-  // Salvar no banco e no estado local
+  // Salvar página no banco e no estado local
   const savePageLocal = async (u: any) => {
     setSaving(true);
     try {
-      const dbId = await savePage(u, proj.dbId || proj.id);
-      const updated = dbId ? { ...u, dbId } : u;
+      const projectId = proj.dbId || proj.id;
+      const pageSlug = (u.title||"pagina")
+        .toLowerCase()
+        .replace(/[àáâãä]/g,"a").replace(/[èéêë]/g,"e")
+        .replace(/[ìíîï]/g,"i").replace(/[òóôõö]/g,"o")
+        .replace(/[ùúûü]/g,"u").replace(/[ç]/g,"c")
+        .replace(/\s+/g,"-").replace(/[^a-z0-9-]/g,"");
+      const res = await fetch("/api/pages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: u.dbId || undefined,
+          project_id: projectId,
+          title: u.title,
+          slug: pageSlug,
+          blocks: u.blocks || [],
+          published: u.published || false,
+        }),
+      });
+      const updated = res.ok ? { ...u, dbId: (await res.json()).page?.id || u.dbId } : u;
       setProj((p: any) => ({ ...p, pages: (p.pages||[]).map((pg: any) => pg.id===u.id ? updated : pg) }));
       setSaving(false);
       return updated;
@@ -2020,11 +2038,13 @@ export default function CRMApp({ userEmail, userName, userId }: CRMAppProps) {
   // ── Persistir projeto (criar ou atualizar) ────────────────────────────────
   const saveProject = async (proj: any) => {
     try {
+      // Só envia id se for um UUID real do banco (não IDs temporários como "proj123")
+      const isRealId = proj.dbId || (proj.id && !String(proj.id).startsWith("proj") && !String(proj.id).startsWith("demo"));
       const res = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: proj.dbId || proj.id || undefined,
+          id: isRealId ? (proj.dbId || proj.id) : undefined,
           name: proj.name,
           description: proj.desc,
           color: proj.color,
@@ -2171,7 +2191,7 @@ export default function CRMApp({ userEmail, userName, userId }: CRMAppProps) {
     if (page==="leads") return <LeadsPage proj={active} setProj={setActive} C={C} saveForm={saveForm} saveLead={saveLead}/>;
     if (page==="email") return <EmailPage proj={active} setProj={setActive} C={C}/>;
     if (page==="scoring") return <ScoringPage proj={active} setProj={setActive} C={C}/>;
-    if (page==="pages") return <LandingPages proj={active} setProj={setActive} C={C} savePage={savePage}/>;
+    if (page==="pages") return <LandingPages proj={active} setProj={setActive} C={C}/>;
   };
 
   const sidebarBg = theme==="light" ? "#ffffff" : "#070e19";
