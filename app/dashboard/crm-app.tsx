@@ -439,19 +439,73 @@ const GlobalDashboard = ({ projects, C }) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // CRM KANBAN
 // ═══════════════════════════════════════════════════════════════════════════════
-const CRM = ({ proj, setProj, C }) => {
+const CRM = ({ proj, setProj, C, saveLead }) => {
   const [dragging, setDragging] = useState(null);
   const [over, setOver] = useState(null);
   const [sel, setSel] = useState(null);
   const [note, setNote] = useState("");
+  const [editLead, setEditLead] = useState<any>(null);
+  const [showNewLead, setShowNewLead] = useState(false);
+  const allPossibleFields = ["name","email","phone","company","website","notes"];
+  const fieldLabels: Record<string,string> = { name:"Nome", email:"E-mail", phone:"Telefone / WhatsApp", company:"Empresa", website:"Website", notes:"Observações" };
 
   const move = (lid, stage) => {
     setProj(p => ({ ...p, leads: p.leads.map(l => l.id===lid ? {...l, stage} : l) }));
     if (sel?.id===lid) setSel(s => ({...s, stage}));
+    // Salvar novo estágio no banco
+    const lead = proj.leads.find(l => l.id===lid);
+    if(lead && saveLead) saveLead({...lead, stage, dbId: lead.dbId||lead.id}, proj.dbId||proj.id).catch(()=>{});
+  };
+
+  // Modal de edição de lead no kanban
+  const KanbanLeadModal = () => {
+    const l = editLead;
+    const [ldata, setLdata] = useState({...l});
+    const [tagInput, setTagInput] = useState(l.tags?.join(", ")||"");
+    return (
+      <Modal title="Editar Lead" onClose={()=>setEditLead(null)} C={C}>
+        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+          <Inp C={C} label="Nome *" value={ldata.name||""} onChange={(e:any)=>setLdata((p:any)=>({...p,name:e.target.value}))} />
+          <Inp C={C} label="E-mail" value={ldata.email||""} onChange={(e:any)=>setLdata((p:any)=>({...p,email:e.target.value}))} />
+          <Inp C={C} label="Telefone / WhatsApp" value={ldata.phone||""} onChange={(e:any)=>setLdata((p:any)=>({...p,phone:e.target.value}))} />
+          <Inp C={C} label="Empresa" value={ldata.company||""} onChange={(e:any)=>setLdata((p:any)=>({...p,company:e.target.value}))} />
+          <Inp C={C} label="Tags (separadas por vírgula)" value={tagInput} onChange={(e:any)=>setTagInput(e.target.value)} />
+          <div style={{ display:"flex", gap:8 }}>
+            <div style={{ flex:1 }}>
+              <label style={{ fontSize:11, color:C.textSub, display:"block", marginBottom:5 }}>Etapa</label>
+              <select value={ldata.stage} onChange={e=>setLdata((p:any)=>({...p,stage:e.target.value}))}
+                style={{ width:"100%", background:C.muted, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"8px 10px", fontSize:13, fontFamily:"inherit", outline:"none" }}>
+                {proj.funnel.map((s:string)=><option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div style={{ flex:1 }}>
+              <label style={{ fontSize:11, color:C.textSub, display:"block", marginBottom:5 }}>Score (0-100)</label>
+              <input type="number" min={0} max={100} value={ldata.score||0} onChange={e=>setLdata((p:any)=>({...p,score:parseInt(e.target.value)||0}))}
+                style={{ width:"100%", background:C.muted, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"8px 10px", fontSize:13, fontFamily:"inherit", outline:"none", boxSizing:"border-box" as const }} />
+            </div>
+          </div>
+          <div style={{ display:"flex", gap:8 }}>
+            <Btn C={C} sx={{ flex:1, justifyContent:"center" }} onClick={async()=>{
+              const tags = tagInput.split(",").map((t:string)=>t.trim()).filter(Boolean);
+              const updated = {...ldata, tags};
+              if(saveLead) await saveLead({...updated, dbId: l.dbId||l.id}, proj.dbId||proj.id);
+              setProj((p:any)=>({...p, leads: p.leads.map((ld:any)=>ld.id===l.id?updated:ld)}));
+              setEditLead(null);
+            }}>Salvar</Btn>
+            <button onClick={async()=>{
+              if(l.dbId||l.id) { try { await fetch(`/api/leads?id=${l.dbId||l.id}`,{method:"DELETE"}); } catch {} }
+              setProj((p:any)=>({...p,leads:p.leads.filter((ld:any)=>ld.id!==l.id)}));
+              setEditLead(null);
+            }} style={{ background:"transparent", border:`1px solid ${C.red}40`, color:C.red, borderRadius:8, padding:"0 16px", fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>Excluir</button>
+          </div>
+        </div>
+      </Modal>
+    );
   };
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+      {editLead && <KanbanLeadModal />}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
         <div>
           <div style={{ fontSize:11, color:proj.color, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:4, fontWeight:700 }}>{proj.icon} {proj.name}</div>
@@ -627,7 +681,7 @@ const LeadsPage = ({ proj, setProj, C, saveForm, saveLead }) => {
     const isNew = !f?.id;
     const [fname, setFname] = useState(f?.name || "");
     const [ftag, setFtag]   = useState(f?.tag || "");
-    const [ffields, setFfields] = useState<string[]>(f?.fields || ["Nome","E-mail","Telefone"]);
+    const [ffields, setFfields] = useState<string[]>(f?.fields || ["Nome completo","Empresa","Ramo de atividade","Faturamento anual","Qtd. de funcionários","Cidade","Telefone / WhatsApp","E-mail"]);
     const [nfield, setNfield] = useState("");
     return (
       <Modal title={isNew ? "Novo Formulário" : "Editar Formulário"} onClose={()=>setShowFormEditor(null)} C={C}>
@@ -960,6 +1014,7 @@ const EmailPage = ({ proj, setProj, C }) => {
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+      {editLead && <KanbanLeadModal />}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
         <div>
           <div style={{ fontSize:11, color:proj.color, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:4, fontWeight:700 }}>{proj.icon} {proj.name}</div>
@@ -1418,7 +1473,34 @@ const Sec = ({ title, C, children }) => (
 
 const HeroPanel = ({ d, u, C }) => <>
   <Sec title="Logo & Mídia" C={C}><PI C={C} label="URL do logo" value={d.logoUrl||""} onChange={v=>u("logoUrl",v)} placeholder="https://..."/><PI C={C} label="URL imagem de fundo" value={d.bgImageUrl||""} onChange={v=>u("bgImageUrl",v)} placeholder="https://..."/>{d.bgImageUrl && <><PC C={C} label="Cor do overlay" value={d.overlayColor||"#000000"} onChange={v=>u("overlayColor",v)}/><PI C={C} label="Opacidade overlay (0-100)" value={String(d.overlayOpacity||0)} onChange={v=>u("overlayOpacity",parseInt(v)||0)}/></>}</Sec><Sec title="Conteúdo" C={C}><PT C={C} label="Badge visível" value={d.badgeOn} onChange={v=>u("badgeOn",v)}/>{d.badgeOn&&<PI C={C} label="Texto do badge" value={d.badge} onChange={v=>u("badge",v)}/>}<PI C={C} label="Título" value={d.headline} onChange={v=>u("headline",v)} multiline/><PI C={C} label="Subtítulo" value={d.sub} onChange={v=>u("sub",v)} multiline/><PI C={C} label="CTA texto" value={d.cta} onChange={v=>u("cta",v)}/><PI C={C} label="CTA link" value={d.ctaUrl} onChange={v=>u("ctaUrl",v)}/></Sec>
-  <Sec title="Logo" C={C}><PI C={C} label="URL da logo" value={d.logoUrl||""} onChange={v=>u("logoUrl",v)} placeholder="https://..."/>{d.logoUrl&&<div style={{marginBottom:8}}><label style={{fontSize:10,color:C.textSub,display:"block",marginBottom:4,textTransform:"uppercase",letterSpacing:"0.07em",fontWeight:600}}>Tamanho (px)</label><input type="range" min={30} max={200} value={d.logoSize||60} onChange={e=>u("logoSize",Number(e.target.value))} style={{width:"100%"}}/><span style={{fontSize:10,color:C.textSub}}>{d.logoSize||60}px</span></div>}</Sec>
+  <Sec title="Logo" C={C}><PI C={C} label="URL da logo" value={d.logoUrl||""} onChange={v=>u("logoUrl",v)} placeholder="https://..."/>{d.logoUrl && (
+    <div style={{marginBottom:10}}>
+      <label style={{fontSize:10,color:C.textSub,display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.07em",fontWeight:600}}>Tamanho: {Number(d.logoSize)||60}px</label>
+      <input type="range" min={20} max={300} step={5}
+        value={Number(d.logoSize)||60}
+        onChange={e=>u("logoSize",Number(e.target.value))}
+        style={{width:"100%",accentColor:C.accent}} />
+      <div style={{display:"flex",gap:6,marginTop:6}}>
+        {[40,60,80,120,160].map(s=>(
+          <button key={s} onClick={()=>u("logoSize",s)}
+            style={{flex:1,padding:"4px 0",fontSize:10,fontWeight:700,borderRadius:5,border:`1px solid ${Number(d.logoSize)===s?C.accent:C.border}`,background:Number(d.logoSize)===s?C.accentSoft:"transparent",color:Number(d.logoSize)===s?C.accent:C.textSub,cursor:"pointer"}}>
+            {s}
+          </button>
+        ))}
+      </div>
+    </div>
+  )}
+  <div style={{marginBottom:10}}>
+    <label style={{fontSize:10,color:C.textSub,display:"block",marginBottom:4,textTransform:"uppercase",letterSpacing:"0.07em",fontWeight:600}}>Posição</label>
+    <div style={{display:"flex",gap:6}}>
+      {[{v:"left",l:"Esq"},{v:"center",l:"Centro"},{v:"right",l:"Dir"}].map(({v,l})=>(
+        <button key={v} onClick={()=>u("logoAlign",v)}
+          style={{flex:1,padding:"6px 0",fontSize:11,fontWeight:700,borderRadius:6,border:`1px solid ${(d.logoAlign||d.align||"center")===v?C.accent:C.border}`,background:(d.logoAlign||d.align||"center")===v?C.accentSoft:"transparent",color:(d.logoAlign||d.align||"center")===v?C.accent:C.textSub,cursor:"pointer"}}>
+          {l}
+        </button>
+      ))}
+    </div>
+  </div></Sec>
   <Sec title="Imagem de fundo" C={C}><PI C={C} label="URL da imagem" value={d.bgImage||""} onChange={v=>u("bgImage",v)} placeholder="https://..."/><PT C={C} label="Overlay ativo" value={d.bgOverlayOn||false} onChange={v=>u("bgOverlayOn",v)}/>{d.bgOverlayOn&&<PC C={C} label="Cor do overlay" value={d.bgOverlay||"#00000060"} onChange={v=>u("bgOverlay",v)}/>}</Sec>
   <Sec title="Estilo" C={C}><PS C={C} label="Alinhamento" value={d.align} onChange={v=>u("align",v)} opts={[{v:"center",l:"Centralizado"},{v:"left",l:"Esquerda"}]}/><PS C={C} label="Fundo" value={d.bgStyle} onChange={v=>u("bgStyle",v)} opts={[{v:"gradient",l:"Gradiente"},{v:"solid",l:"Sólido"}]}/><PC C={C} label="Cor fundo" value={d.bg} onChange={v=>u("bg",v)}/><PC C={C} label="Título" value={d.headC} onChange={v=>u("headC",v)}/><PC C={C} label="Subtítulo" value={d.subC} onChange={v=>u("subC",v)}/><PC C={C} label="Destaque" value={d.accent} onChange={v=>u("accent",v)}/></Sec>
 </>;
@@ -1686,6 +1768,7 @@ const LandingPages = ({ proj, setProj, C }) => {
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+      {editLead && <KanbanLeadModal />}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
         <div>
           <div style={{ fontSize:11, color:proj.color, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:4, fontWeight:700 }}>{proj.icon} {proj.name}</div>
@@ -2160,11 +2243,15 @@ export default function CRMApp({ userEmail, userName, userId }: CRMAppProps) {
           </button>
         </div>
         {showNewProj && <NewProject C={C} onClose={()=>setShowNewProj(false)} onCreate={async p=>{
-          setProjects([p]);
-          setActiveId(p.id);
-          const dbId = await saveProject(p);
-          if(dbId) setProjects(prev=>prev.map(x=>x.id===p.id?{...x,dbId,id:dbId}:x));
+          const tempId = p.id;
+          setProjects(prev=>[...prev, p]);
+          setActiveId(tempId);
           setShowNewProj(false);
+          const dbId = await saveProject(p);
+          if(dbId) {
+            setProjects(prev=>prev.map(x=>x.id===tempId?{...x,dbId,id:dbId}:x));
+            setActiveId(dbId);
+          }
         }}/>}
       </div>
     </div>
@@ -2187,7 +2274,7 @@ export default function CRMApp({ userEmail, userName, userId }: CRMAppProps) {
   const renderPage = () => {
     if (page==="team") return <TeamPage C={C} userEmail={userEmail}/>;
     if (page==="crm") return <ProjectDashboard proj={active} C={C}/>;
-    if (page==="kanban") return <CRM proj={active} setProj={setActive} C={C}/>;
+    if (page==="kanban") return <CRM proj={active} setProj={setActive} C={C} saveLead={saveLead}/>;
     if (page==="leads") return <LeadsPage proj={active} setProj={setActive} C={C} saveForm={saveForm} saveLead={saveLead}/>;
     if (page==="email") return <EmailPage proj={active} setProj={setActive} C={C}/>;
     if (page==="scoring") return <ScoringPage proj={active} setProj={setActive} C={C}/>;
