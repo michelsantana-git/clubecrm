@@ -718,7 +718,7 @@ const LeadsPage = ({ proj, setProj, C }) => {
               <div style={{ fontSize:13, fontWeight:800, color:C.text, marginBottom:14 }}>📤 Exportar</div>
               <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
                 {[
-            </div>))}      { label:"Exportar todos os leads", sub:`${proj.leads.length} leads com todos os campos`, icon:"download", action:exportLeads },
+                  { label:"Exportar todos os leads", sub:`${proj.leads.length} leads com todos os campos`, icon:"download", action:exportLeads },
                   { label:"Exportar leads filtrados", sub:`${filtered.length} lead${filtered.length!==1?"s":""} do filtro atual`, icon:"download", action:() => { const rows=filtered.map(l=>({...l,tags:l.tags.join(";")})); downloadCSV(toCSV(rows,["name","email","phone","company","tags","score","stage","source","date"]),`leads-filtrados-${proj.id}.csv`); } },
                   { label:"Baixar template de importação", sub:"Planilha formatada para preenchimento", icon:"download", action:exportFunnel },
                 ].map(item => (
