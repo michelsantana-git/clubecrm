@@ -83,8 +83,8 @@ const Icon = ({ n, size = 15, color, style: s }) => (
 // ═══════════════════════════════════════════════════════════════════════════════
 // MOCK DATA
 // ═══════════════════════════════════════════════════════════════════════════════
-const mkHero = () => ({ id: "h" + Date.now(), type: "hero", data: { badge: "Evento Exclusivo", badgeOn: true, headline: "Transforme Sua Empresa em 90 Dias", sub: "Junte-se ao grupo seleto de empresários que estão escalando seus negócios com mentoria e networking de alto nível.", cta: "Quero Participar", ctaUrl: "#form", bg: "#ffffff", headC: "#0d1b2e", subC: "#5a7593", accent: "#1d6aff", align: "center", bgStyle: "solid" } });
-const mkAbout = () => ({ id: "a" + Date.now(), type: "about", data: { tagOn: true, tag: "Sobre o Programa", title: "O que é o Clube de Empresários?", body: "Um ambiente exclusivo para empresários que faturam acima de R$ 500k/ano trocarem experiências, fecharem parcerias e acelerarem seus resultados com mentoria especializada.", highlight: "Mais de 200 empresários já transformaram seus negócios.", bg: "#f5f6fa", textC: "#0d1b2e", subC: "#5a7593", accent: "#1d6aff" } });
+const mkHero = () => ({ id: "h" + Date.now(), type: "hero", data: { badge: "Evento Exclusivo", badgeOn: true, headline: "Transforme Sua Empresa em 90 Dias", sub: "Junte-se ao grupo seleto de empresários que estão escalando seus negócios com mentoria e networking de alto nível.", cta: "Quero Participar", ctaUrl: "#form", bg: "#ffffff", headC: "#0d1b2e", subC: "#5a7593", accent: "#1d6aff", align: "center", bgStyle: "solid", logoUrl: "", bgImageUrl: "", overlayColor: "#000000", overlayOpacity: 0 } });
+const mkAbout = () => ({ id: "a" + Date.now(), type: "about", data: { tagOn: true, tag: "Sobre o Programa", title: "O que é o Clube de Empresários?", body: "Um ambiente exclusivo para empresários que faturam acima de R$ 500k/ano trocarem experiências, fecharem parcerias e acelerarem seus resultados com mentoria especializada.", highlight: "Mais de 200 empresários já transformaram seus negócios.", bg: "#f5f6fa", textC: "#0d1b2e", subC: "#5a7593", accent: "#1d6aff", bgImageUrl: "", overlayColor: "#000000", overlayOpacity: 0 } });
 const mkForm = (forms = []) => ({ id: "f" + Date.now(), type: "form", data: { title: "Reserve sua vaga", sub: "Vagas limitadas. Preencha e entraremos em contato.", formId: forms[0]?.id || null, formName: forms[0]?.name || null, cta: "Quero Me Inscrever →", bg: "#ffffff", accent: "#1d6aff", socialOn: true, social: "✓ Seguro  ✓ Sem spam  ✓ Cancelamento fácil", fields: forms[0]?.fields || ["Nome completo", "E-mail", "Telefone", "Empresa"] } });
 
 const INITIAL = [
@@ -1187,19 +1187,28 @@ const ScoringPage = ({ proj, setProj, C }) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 const PrevHero = ({ d, mob }) => {
   const bg = d.bgStyle==="gradient" ? `linear-gradient(155deg, ${d.bg} 0%, #0d1f3c 100%)` : d.bg;
+  const hasOverlay = d.bgImageUrl && d.overlayOpacity > 0;
   return (
-    <div style={{ background:bg, padding:mob?"44px 22px":"72px 56px", textAlign:d.align, fontFamily:"'DM Sans',sans-serif", position:"relative", overflow:"hidden" }}>
-      <div style={{ position:"absolute", top:"5%", left:"50%", transform:"translateX(-50%)", width:400, height:400, background:`radial-gradient(circle, ${d.accent}14 0%, transparent 65%)`, pointerEvents:"none" }} />
-      {d.badgeOn && <div style={{ display:"inline-flex", alignItems:"center", gap:5, background:`${d.accent}1e`, border:`1px solid ${d.accent}38`, borderRadius:99, padding:"4px 13px", fontSize:mob?9:11, fontWeight:700, color:d.accent, marginBottom:18, letterSpacing:"0.06em" }}><span style={{ width:4, height:4, borderRadius:"50%", background:d.accent, display:"inline-block" }}/>{d.badge}</div>}
-      <h1 style={{ fontSize:mob?24:40, fontWeight:900, color:d.headC, lineHeight:1.1, letterSpacing:"-0.03em", margin:"0 auto 16px", maxWidth:mob?"100%":640 }}>{d.headline}</h1>
-      <p style={{ fontSize:mob?13:15, color:d.subC, maxWidth:mob?"100%":520, margin:"0 auto 28px", lineHeight:1.6 }}>{d.sub}</p>
-      <a href={d.ctaUrl} style={{ display:"inline-block", background:d.accent, color:"#fff", padding:mob?"11px 24px":"13px 32px", borderRadius:9, fontWeight:700, fontSize:mob?12:14, textDecoration:"none", boxShadow:`0 6px 28px ${d.accent}38` }}>{d.cta}</a>
+    <div style={{ background:bg, padding:mob?"44px 22px":"72px 56px", textAlign:d.align, fontFamily:"'DM Sans',sans-serif", position:"relative", overflow:"hidden",
+      backgroundImage: d.bgImageUrl ? `url(${d.bgImageUrl})` : undefined,
+      backgroundSize: "cover", backgroundPosition: "center" }}>
+      {hasOverlay && <div style={{ position:"absolute", inset:0, background:d.overlayColor, opacity:d.overlayOpacity/100, pointerEvents:"none" }} />}
+      <div style={{ position:"relative", zIndex:1 }}>
+        {d.logoUrl && <img src={d.logoUrl} alt="Logo" style={{ height:mob?40:56, marginBottom:20, objectFit:"contain" }} />}
+        {d.badgeOn && <div style={{ display:"inline-flex", alignItems:"center", gap:5, background:`${d.accent}1e`, border:`1px solid ${d.accent}38`, borderRadius:99, padding:"4px 13px", fontSize:mob?9:11, fontWeight:700, color:d.accent, marginBottom:18, letterSpacing:"0.06em" }}><span style={{ width:4, height:4, borderRadius:"50%", background:d.accent, display:"inline-block" }}/>{d.badge}</div>}
+        <h1 style={{ fontSize:mob?24:40, fontWeight:900, color:d.headC, lineHeight:1.1, letterSpacing:"-0.03em", margin:"0 auto 16px", maxWidth:mob?"100%":640 }}>{d.headline}</h1>
+        <p style={{ fontSize:mob?13:15, color:d.subC, maxWidth:mob?"100%":520, margin:"0 auto 28px", lineHeight:1.6 }}>{d.sub}</p>
+        <a href={d.ctaUrl} style={{ display:"inline-block", background:d.accent, color:"#fff", padding:mob?"11px 24px":"13px 32px", borderRadius:9, fontWeight:700, fontSize:mob?12:14, textDecoration:"none", boxShadow:`0 6px 28px ${d.accent}38` }}>{d.cta}</a>
+      </div>
     </div>
   );
 };
 const PrevAbout = ({ d, mob }) => (
-  <div style={{ background:d.bg, padding:mob?"36px 22px":"64px 56px", fontFamily:"'DM Sans',sans-serif" }}>
-    <div style={{ maxWidth:640, margin:"0 auto" }}>
+  <div style={{ background:d.bg, padding:mob?"36px 22px":"64px 56px", fontFamily:"'DM Sans',sans-serif", position:"relative",
+    backgroundImage: d.bgImageUrl ? `url(${d.bgImageUrl})` : undefined,
+    backgroundSize: "cover", backgroundPosition: "center" }}>
+    {d.bgImageUrl && d.overlayOpacity > 0 && <div style={{ position:"absolute", inset:0, background:d.overlayColor||"#000", opacity:(d.overlayOpacity||0)/100, pointerEvents:"none" }} />}
+    <div style={{ maxWidth:640, margin:"0 auto", position:"relative", zIndex:1 }}>
       {d.tagOn && <div style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:10, fontWeight:700, color:d.accent, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:14 }}><div style={{ width:18, height:2, background:d.accent }}/>{d.tag}</div>}
       <h2 style={{ fontSize:mob?20:30, fontWeight:800, color:d.textC, lineHeight:1.2, letterSpacing:"-0.02em", marginBottom:16 }}>{d.title}</h2>
       <p style={{ fontSize:mob?13:15, color:d.subC, lineHeight:1.7, marginBottom:24, whiteSpace:"pre-wrap" }}>{d.body}</p>
@@ -1279,12 +1288,15 @@ const Sec = ({ title, C, children }) => (
 );
 
 const HeroPanel = ({ d, u, C }) => <>
-  <Sec title="Conteúdo" C={C}><PT C={C} label="Badge visível" value={d.badgeOn} onChange={v=>u("badgeOn",v)}/>{d.badgeOn&&<PI C={C} label="Texto do badge" value={d.badge} onChange={v=>u("badge",v)}/>}<PI C={C} label="Título" value={d.headline} onChange={v=>u("headline",v)} multiline/><PI C={C} label="Subtítulo" value={d.sub} onChange={v=>u("sub",v)} multiline/><PI C={C} label="CTA texto" value={d.cta} onChange={v=>u("cta",v)}/><PI C={C} label="CTA link" value={d.ctaUrl} onChange={v=>u("ctaUrl",v)}/></Sec>
+  <Sec title="Logo & Mídia" C={C}><PI C={C} label="URL do logo" value={d.logoUrl||""} onChange={v=>u("logoUrl",v)} placeholder="https://..."/><PI C={C} label="URL imagem de fundo" value={d.bgImageUrl||""} onChange={v=>u("bgImageUrl",v)} placeholder="https://..."/>{d.bgImageUrl && <><PC C={C} label="Cor do overlay" value={d.overlayColor||"#000000"} onChange={v=>u("overlayColor",v)}/><PI C={C} label="Opacidade overlay (0-100)" value={String(d.overlayOpacity||0)} onChange={v=>u("overlayOpacity",parseInt(v)||0)}/></>}</Sec><Sec title="Conteúdo" C={C}><PT C={C} label="Badge visível" value={d.badgeOn} onChange={v=>u("badgeOn",v)}/>{d.badgeOn&&<PI C={C} label="Texto do badge" value={d.badge} onChange={v=>u("badge",v)}/>}<PI C={C} label="Título" value={d.headline} onChange={v=>u("headline",v)} multiline/><PI C={C} label="Subtítulo" value={d.sub} onChange={v=>u("sub",v)} multiline/><PI C={C} label="CTA texto" value={d.cta} onChange={v=>u("cta",v)}/><PI C={C} label="CTA link" value={d.ctaUrl} onChange={v=>u("ctaUrl",v)}/></Sec>
+  <Sec title="Logo" C={C}><PI C={C} label="URL da logo" value={d.logoUrl||""} onChange={v=>u("logoUrl",v)} placeholder="https://..."/>{d.logoUrl&&<div style={{marginBottom:8}}><label style={{fontSize:10,color:C.textSub,display:"block",marginBottom:4,textTransform:"uppercase",letterSpacing:"0.07em",fontWeight:600}}>Tamanho (px)</label><input type="range" min={30} max={200} value={d.logoSize||60} onChange={e=>u("logoSize",parseInt(e.target.value))} style={{width:"100%"}}/><span style={{fontSize:10,color:C.textSub}}>{d.logoSize||60}px</span></div>}</Sec>
+  <Sec title="Imagem de fundo" C={C}><PI C={C} label="URL da imagem" value={d.bgImage||""} onChange={v=>u("bgImage",v)} placeholder="https://..."/><PT C={C} label="Overlay ativo" value={d.bgOverlayOn||false} onChange={v=>u("bgOverlayOn",v)}/>{d.bgOverlayOn&&<PC C={C} label="Cor do overlay" value={d.bgOverlay||"#00000060"} onChange={v=>u("bgOverlay",v)}/>}</Sec>
   <Sec title="Estilo" C={C}><PS C={C} label="Alinhamento" value={d.align} onChange={v=>u("align",v)} opts={[{v:"center",l:"Centralizado"},{v:"left",l:"Esquerda"}]}/><PS C={C} label="Fundo" value={d.bgStyle} onChange={v=>u("bgStyle",v)} opts={[{v:"gradient",l:"Gradiente"},{v:"solid",l:"Sólido"}]}/><PC C={C} label="Cor fundo" value={d.bg} onChange={v=>u("bg",v)}/><PC C={C} label="Título" value={d.headC} onChange={v=>u("headC",v)}/><PC C={C} label="Subtítulo" value={d.subC} onChange={v=>u("subC",v)}/><PC C={C} label="Destaque" value={d.accent} onChange={v=>u("accent",v)}/></Sec>
 </>;
 const AboutPanel = ({ d, u, C }) => <>
   <Sec title="Conteúdo" C={C}><PT C={C} label="Tag visível" value={d.tagOn} onChange={v=>u("tagOn",v)}/>{d.tagOn&&<PI C={C} label="Tag" value={d.tag} onChange={v=>u("tag",v)}/>}<PI C={C} label="Título" value={d.title} onChange={v=>u("title",v)}/><PI C={C} label="Corpo" value={d.body} onChange={v=>u("body",v)} multiline/><PI C={C} label="Destaque" value={d.highlight} onChange={v=>u("highlight",v)}/></Sec>
-  <Sec title="Estilo" C={C}><PC C={C} label="Fundo" value={d.bg} onChange={v=>u("bg",v)}/><PC C={C} label="Texto" value={d.textC} onChange={v=>u("textC",v)}/><PC C={C} label="Secundário" value={d.subC} onChange={v=>u("subC",v)}/><PC C={C} label="Destaque" value={d.accent} onChange={v=>u("accent",v)}/></Sec>
+  <Sec title="Imagem de fundo" C={C}><PI C={C} label="URL da imagem" value={d.bgImage||""} onChange={v=>u("bgImage",v)} placeholder="https://..."/><PT C={C} label="Overlay ativo" value={d.bgOverlayOn||false} onChange={v=>u("bgOverlayOn",v)}/>{d.bgOverlayOn&&<PC C={C} label="Cor do overlay" value={d.bgOverlay||"#00000060"} onChange={v=>u("bgOverlay",v)}/>}</Sec>
+  <Sec title="Estilo" C={C}><PC C={C} label="Fundo" value={d.bg} onChange={v=>u("bg",v)}/><PC C={C} label="Texto" value={d.textC} onChange={v=>u("textC",v)}/><PC C={C} label="Secundário" value={d.subC} onChange={v=>u("subC",v)}/><PC C={C} label="Destaque" value={d.accent} onChange={v=>u("accent",v)}/></Sec><Sec title="Imagem de fundo" C={C}><PI C={C} label="URL da imagem" value={d.bgImageUrl||""} onChange={v=>u("bgImageUrl",v)} placeholder="https://..."/>{d.bgImageUrl && <><PC C={C} label="Cor do overlay" value={d.overlayColor||"#000000"} onChange={v=>u("overlayColor",v)}/><PI C={C} label="Opacidade (0-100)" value={String(d.overlayOpacity||0)} onChange={v=>u("overlayOpacity",parseInt(v)||0)}/></>}</Sec>
 </>;
 const FormPanel = ({ d, u, forms, C }) => <>
   <Sec title="Formulário vinculado" C={C}>
@@ -1313,7 +1325,7 @@ const TMPLS = [
 ];
 
 // ── BUILDER (fixed scroll) ──
-const Builder = ({ page, proj, onSave, onClose, C }) => {
+const Builder = ({ page, proj, onSave, onClose, saving, C }) => {
   const [blocks, setBlocks] = useState(page.blocks || []);
   const [sel, setSel] = useState(null);
   const [mob, setMob] = useState(false);
@@ -1387,8 +1399,8 @@ const Builder = ({ page, proj, onSave, onClose, C }) => {
           </div>
           <div style={{ display:"flex", gap:7, alignItems:"center" }}>
             {pub && <div style={{ display:"flex", gap:5, alignItems:"center", background:C.greenSoft, border:`1px solid ${C.green}30`, borderRadius:7, padding:"4px 11px" }}><div style={{ width:5, height:5, borderRadius:"50%", background:C.green }}/><span style={{ fontSize:11, color:C.green, fontWeight:700 }}>Publicada</span></div>}
-            <Btn C={C} v="ghost" small onClick={()=>onSave({...page,blocks,published:pub})}>Salvar rascunho</Btn>
-            <Btn C={C} small icon="globe" onClick={()=>{setPub(true);onSave({...page,blocks,published:true});}}>Publicar</Btn>
+            <Btn C={C} v="ghost" small onClick={()=>onSave({...page,blocks,published:pub})}>{saving?"Salvando...":"Salvar rascunho"}</Btn>
+            <Btn C={C} small icon="globe" onClick={()=>{setPub(true);onSave({...page,blocks,published:true});}}>{saving?"Salvando...":"Publicar"}</Btn>
           </div>
         </div>
         {/* Canvas with proper scroll */}
@@ -1470,14 +1482,75 @@ const TemplatePicker = ({ proj, onClose, onCreate, C }) => {
 const LandingPages = ({ proj, setProj, C }) => {
   const [editing, setEditing] = useState(null);
   const [showPicker, setShowPicker] = useState(false);
+  const [saving, setSaving] = useState(false);
   const pages = proj.pages || [];
   const slug = t => t.toLowerCase().replace(/\s+/g,"-").replace(/[^a-z0-9-]/g,"");
 
-  const savePage = u => setProj(p => ({ ...p, pages: (p.pages||[]).map(pg => pg.id===u.id?u:pg) }));
-  const addPage = pg => setProj(p => ({ ...p, pages: [...(p.pages||[]), pg] }));
-  const delPage = id => setProj(p => ({ ...p, pages: (p.pages||[]).filter(pg => pg.id!==id) }));
+  // Salvar no banco e no estado local
+  const savePage = async (u: any) => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/pages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: u.dbId || undefined,
+          project_id: proj.id,
+          title: u.title,
+          slug: u.title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g,"-").replace(/[^a-z0-9-]/g,""),
+          blocks: u.blocks,
+          published: u.published,
+        }),
+      });
+      if (res.ok) {
+        const { page } = await res.json();
+        const updated = { ...u, dbId: page.id };
+        setProj((p: any) => ({ ...p, pages: (p.pages||[]).map((pg: any) => pg.id===u.id ? updated : pg) }));
+        setSaving(false);
+        return updated;
+      }
+    } catch (e) {
+      console.error("Erro ao salvar página:", e);
+    }
+    // Fallback: salvar só no estado local
+    setProj((p: any) => ({ ...p, pages: (p.pages||[]).map((pg: any) => pg.id===u.id?u:pg) }));
+    setSaving(false);
+    return u;
+  };
 
-  if (editing) return <Builder page={editing} proj={proj} C={C} onSave={pg=>{savePage(pg);setEditing(pg);}} onClose={()=>setEditing(null)}/>;
+  const addPage = async (pg: any) => {
+    setProj((p: any) => ({ ...p, pages: [...(p.pages||[]), pg] }));
+    // Salvar no banco imediatamente
+    try {
+      const res = await fetch("/api/pages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_id: proj.id,
+          title: pg.title,
+          blocks: pg.blocks,
+          published: pg.published,
+        }),
+      });
+      if (res.ok) {
+        const { page } = await res.json();
+        setProj((p: any) => ({ ...p, pages: (p.pages||[]).map((x: any) => x.id===pg.id ? { ...x, dbId: page.id } : x) }));
+      }
+    } catch (e) { console.error("Erro ao criar página:", e); }
+  };
+
+  const delPage = async (id: string) => {
+    // Encontrar dbId para deletar do banco
+    const pg = pages.find((p: any) => p.id === id);
+    setProj((p: any) => ({ ...p, pages: (p.pages||[]).filter((pg: any) => pg.id!==id) }));
+    if (pg?.dbId) {
+      try { await fetch(`/api/pages?id=${pg.dbId}`, { method: "DELETE" }); } catch {}
+    }
+  };
+
+  if (editing) return <Builder page={editing} proj={proj} C={C} saving={saving}
+    onSave={async (pg: any)=>{ const updated = await savePage(pg); setEditing(updated); }}
+    onClose={()=>setEditing(null)}/>;
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
