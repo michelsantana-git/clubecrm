@@ -83,9 +83,9 @@ const Icon = ({ n, size = 15, color, style: s }) => (
 // ═══════════════════════════════════════════════════════════════════════════════
 // MOCK DATA
 // ═══════════════════════════════════════════════════════════════════════════════
-const mkHero = () => ({ id: "h" + Date.now(), type: "hero", data: { badge: "Evento Exclusivo", badgeOn: true, headline: "Transforme Sua Empresa em 90 Dias", sub: "Junte-se ao grupo seleto de empresários que estão escalando seus negócios com mentoria e networking de alto nível.", cta: "Quero Participar", ctaUrl: "#form", bg: "#03070e", headC: "#ddeaf8", subC: "#6a8fae", accent: "#1d6aff", align: "center", bgStyle: "gradient" } });
-const mkAbout = () => ({ id: "a" + Date.now(), type: "about", data: { tagOn: true, tag: "Sobre o Programa", title: "O que é o Clube de Empresários?", body: "Um ambiente exclusivo para empresários que faturam acima de R$ 500k/ano trocarem experiências, fecharem parcerias e acelerarem seus resultados com mentoria especializada.", highlight: "Mais de 200 empresários já transformaram seus negócios.", bg: "#070e19", textC: "#ddeaf8", subC: "#6a8fae", accent: "#1d6aff" } });
-const mkForm = (forms = []) => ({ id: "f" + Date.now(), type: "form", data: { title: "Reserve sua vaga", sub: "Vagas limitadas. Preencha e entraremos em contato.", formId: forms[0]?.id || null, formName: forms[0]?.name || null, cta: "Quero Me Inscrever →", bg: "#0b1520", accent: "#1d6aff", socialOn: true, social: "✓ Seguro  ✓ Sem spam  ✓ Cancelamento fácil", fields: ["Nome completo", "E-mail", "Telefone", "Empresa"] } });
+const mkHero = () => ({ id: "h" + Date.now(), type: "hero", data: { badge: "Evento Exclusivo", badgeOn: true, headline: "Transforme Sua Empresa em 90 Dias", sub: "Junte-se ao grupo seleto de empresários que estão escalando seus negócios com mentoria e networking de alto nível.", cta: "Quero Participar", ctaUrl: "#form", bg: "#ffffff", headC: "#0d1b2e", subC: "#5a7593", accent: "#1d6aff", align: "center", bgStyle: "solid" } });
+const mkAbout = () => ({ id: "a" + Date.now(), type: "about", data: { tagOn: true, tag: "Sobre o Programa", title: "O que é o Clube de Empresários?", body: "Um ambiente exclusivo para empresários que faturam acima de R$ 500k/ano trocarem experiências, fecharem parcerias e acelerarem seus resultados com mentoria especializada.", highlight: "Mais de 200 empresários já transformaram seus negócios.", bg: "#f5f6fa", textC: "#0d1b2e", subC: "#5a7593", accent: "#1d6aff" } });
+const mkForm = (forms = []) => ({ id: "f" + Date.now(), type: "form", data: { title: "Reserve sua vaga", sub: "Vagas limitadas. Preencha e entraremos em contato.", formId: forms[0]?.id || null, formName: forms[0]?.name || null, cta: "Quero Me Inscrever →", bg: "#ffffff", accent: "#1d6aff", socialOn: true, social: "✓ Seguro  ✓ Sem spam  ✓ Cancelamento fácil", fields: forms[0]?.fields || ["Nome completo", "E-mail", "Telefone", "Empresa"] } });
 
 const INITIAL = [
   {
@@ -1202,24 +1202,35 @@ const PrevAbout = ({ d, mob }) => (
     <div style={{ maxWidth:640, margin:"0 auto" }}>
       {d.tagOn && <div style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:10, fontWeight:700, color:d.accent, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:14 }}><div style={{ width:18, height:2, background:d.accent }}/>{d.tag}</div>}
       <h2 style={{ fontSize:mob?20:30, fontWeight:800, color:d.textC, lineHeight:1.2, letterSpacing:"-0.02em", marginBottom:16 }}>{d.title}</h2>
-      <p style={{ fontSize:mob?13:15, color:d.subC, lineHeight:1.7, marginBottom:24 }}>{d.body}</p>
+      <p style={{ fontSize:mob?13:15, color:d.subC, lineHeight:1.7, marginBottom:24, whiteSpace:"pre-wrap" }}>{d.body}</p>
       {d.highlight && <div style={{ borderLeft:`3px solid ${d.accent}`, paddingLeft:14, fontSize:mob?13:15, fontWeight:700, color:d.textC }}>{d.highlight}</div>}
     </div>
   </div>
 );
-const PrevForm = ({ d, mob }) => (
-  <div style={{ background:d.bg, padding:mob?"36px 18px":"64px 56px", fontFamily:"'DM Sans',sans-serif" }}>
-    <div style={{ maxWidth:440, margin:"0 auto", background:"#070e19", border:"1px solid #0f1e30", borderRadius:18, padding:mob?"24px 18px":"36px 32px" }}>
-      <h2 style={{ fontSize:mob?18:23, fontWeight:800, color:"#ddeaf8", marginBottom:7 }}>{d.title}</h2>
-      <p style={{ fontSize:12, color:"#6a8fae", marginBottom:20, lineHeight:1.5 }}>{d.sub}</p>
-      <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-        {d.fields.map((f,i) => <div key={i} style={{ background:"#0b1520", border:"1px solid #0f1e30", borderRadius:7, padding:"9px 12px", fontSize:12, color:"#3d5a7a" }}>{f}</div>)}
-        <button style={{ background:d.accent, color:"#fff", border:"none", borderRadius:8, padding:"12px", fontSize:13, fontWeight:700, cursor:"pointer", marginTop:4 }}>{d.cta}</button>
+const PrevForm = ({ d, mob }) => {
+  // Derivar cores do card baseado no fundo — claro ou escuro
+  const isDark = d.bg && (d.bg.startsWith("#0") || d.bg.startsWith("#1") || d.bg === "#000");
+  const cardBg = d.cardBg || (isDark ? "#ffffff14" : "#f5f6fa");
+  const cardBorder = isDark ? "#ffffff18" : "#e4e8f0";
+  const titleC = d.titleC || (isDark ? "#ffffff" : "#0d1b2e");
+  const subC = d.subC || (isDark ? "#aaaacc" : "#5a7593");
+  const fieldBg = isDark ? "#ffffff0e" : "#ffffff";
+  const fieldBorder = isDark ? "#ffffff1a" : "#dde4ed";
+  const fieldC = isDark ? "#ccccdd" : "#3d5a7a";
+  return (
+    <div style={{ background:d.bg, padding:mob?"36px 18px":"64px 56px", fontFamily:"'DM Sans',sans-serif" }}>
+      <div style={{ maxWidth:440, margin:"0 auto", background:cardBg, border:`1px solid ${cardBorder}`, borderRadius:18, padding:mob?"24px 18px":"36px 32px" }}>
+        <h2 style={{ fontSize:mob?18:23, fontWeight:800, color:titleC, marginBottom:7 }}>{d.title}</h2>
+        <p style={{ fontSize:12, color:subC, marginBottom:20, lineHeight:1.5 }}>{d.sub}</p>
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          {(d.fields||[]).map((f:string,i:number) => <div key={i} style={{ background:fieldBg, border:`1px solid ${fieldBorder}`, borderRadius:7, padding:"9px 12px", fontSize:12, color:fieldC }}>{f}</div>)}
+          <button style={{ background:d.accent, color:"#fff", border:"none", borderRadius:8, padding:"12px", fontSize:13, fontWeight:700, cursor:"pointer", marginTop:4 }}>{d.cta}</button>
+        </div>
+        {d.socialOn && <p style={{ fontSize:10, color:subC, textAlign:"center", marginTop:14 }}>{d.social}</p>}
       </div>
-      {d.socialOn && <p style={{ fontSize:10, color:"#3d5a7a", textAlign:"center", marginTop:14 }}>{d.social}</p>}
     </div>
-  </div>
-);
+  );
+};
 const BlockPrev = ({ b, mob }) => {
   if (b.type==="hero") return <PrevHero d={b.data} mob={mob} />;
   if (b.type==="about") return <PrevAbout d={b.data} mob={mob} />;
@@ -1278,13 +1289,19 @@ const AboutPanel = ({ d, u, C }) => <>
 const FormPanel = ({ d, u, forms, C }) => <>
   <Sec title="Formulário vinculado" C={C}>
     {forms.length>0
-      ? <select value={d.formId||""} onChange={e=>{const f=forms.find(f=>String(f.id)===e.target.value);u("formId",f?.id||null);u("formName",f?.name||null);}} style={{ width:"100%", background:C.muted, border:`1px solid ${C.border}`, borderRadius:6, color:C.text, padding:"7px 9px", fontSize:12, fontFamily:"inherit" }}>
+      ? <select value={d.formId||""} onChange={e=>{
+          const f=forms.find(f=>String(f.id)===e.target.value);
+          u("formId",f?.id||null);
+          u("formName",f?.name||null);
+          // Carregar campos do formulário selecionado automaticamente
+          if(f?.fields) u("fields", f.fields);
+        }} style={{ width:"100%", background:C.muted, border:`1px solid ${C.border}`, borderRadius:6, color:C.text, padding:"7px 9px", fontSize:12, fontFamily:"inherit" }}>
           <option value="">— Selecione —</option>{forms.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}
         </select>
       : <div style={{ fontSize:11, color:C.textSub }}>Nenhum formulário. Crie na aba Leads.</div>}
   </Sec>
   <Sec title="Conteúdo" C={C}><PI C={C} label="Título" value={d.title} onChange={v=>u("title",v)}/><PI C={C} label="Subtítulo" value={d.sub} onChange={v=>u("sub",v)}/><PI C={C} label="Texto CTA" value={d.cta} onChange={v=>u("cta",v)}/><PT C={C} label="Prova social" value={d.socialOn} onChange={v=>u("socialOn",v)}/>{d.socialOn&&<PI C={C} label="Texto" value={d.social} onChange={v=>u("social",v)}/>}</Sec>
-  <Sec title="Estilo" C={C}><PC C={C} label="Fundo" value={d.bg} onChange={v=>u("bg",v)}/><PC C={C} label="Destaque" value={d.accent} onChange={v=>u("accent",v)}/></Sec>
+  <Sec title="Estilo" C={C}><PC C={C} label="Fundo da seção" value={d.bg} onChange={v=>u("bg",v)}/><PC C={C} label="Cor do botão" value={d.accent} onChange={v=>u("accent",v)}/><PC C={C} label="Título" value={d.titleC||"#0d1b2e"} onChange={v=>u("titleC",v)}/><PC C={C} label="Subtítulo" value={d.subC||"#5a7593"} onChange={v=>u("subC",v)}/><PC C={C} label="Fundo do card" value={d.cardBg||"#f5f6fa"} onChange={v=>u("cardBg",v)}/></Sec>
 </>;
 
 const BTYPES = [{type:"hero",label:"Hero / Cabeçalho",icon:"zap",desc:"Título, subtítulo e CTA"},{type:"about",label:"Sobre / Descrição",icon:"layout",desc:"Texto, destaque, tag"},{type:"form",label:"Formulário",icon:"send",desc:"Vinculado ao projeto"}];
@@ -1310,7 +1327,7 @@ const Builder = ({ page, proj, onSave, onClose, C }) => {
   const delBlock = id => { setBlocks(p=>p.filter(b=>b.id!==id)); if(sel===id) setSel(null); };
   const mvBlock = (id,dir) => setBlocks(prev=>{const i=prev.findIndex(b=>b.id===id),arr=[...prev];if(dir==="up"&&i===0||dir==="down"&&i===arr.length-1)return prev;const sw=dir==="up"?i-1:i+1;[arr[i],arr[sw]]=[arr[sw],arr[i]];return arr;});
   const slug = page.title.toLowerCase().replace(/\s+/g,"-").replace(/[^a-z0-9-]/g,"");
-  const url = `seu-app.vercel.app/p/${proj.id}/${slug}`;
+  const url = `${process.env.NEXT_PUBLIC_APP_URL || 'https://clubecrm.vercel.app'}/p/${proj.id}/${slug}`;
 
   return (
     <div style={{ position:"fixed", inset:0, display:"flex", background:C.bg, fontFamily:"'DM Sans',sans-serif", zIndex:200, overflow:"hidden" }}>
@@ -1475,7 +1492,7 @@ const LandingPages = ({ proj, setProj, C }) => {
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:12 }}>
         {pages.map(pg => {
           const tmpl=TMPLS.find(t=>t.id===pg.template);
-          const url=`seu-app.vercel.app/p/${proj.id}/${slug(pg.title)}`;
+          const url=`${process.env.NEXT_PUBLIC_APP_URL || 'https://clubecrm.vercel.app'}/p/${proj.id}/${slug(pg.title)}`;
           return (
             <div key={pg.id} style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, overflow:"hidden", display:"flex", flexDirection:"column", boxShadow:C.shadowCard, transition:"border-color 0.15s" }}
               onMouseEnter={e=>e.currentTarget.style.borderColor=C.accent}
