@@ -283,6 +283,98 @@ const ProjectSelector = ({ projects, activeId, onChange, onNew, C }) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // GLOBAL DASHBOARD
 // ═══════════════════════════════════════════════════════════════════════════════
+const ProjectDashboard = ({ proj, C }) => {
+  const leads = proj?.leads || [];
+  const total = leads.length;
+  const hot = leads.filter(l => l.score >= 70).length;
+  const closed = leads.filter(l => l.stage==="fechado").length;
+  const avg = total ? Math.round(leads.reduce((a,b) => a+b.score,0)/total) : 0;
+  const nlSubs = leads.filter(l => l.nl).length;
+  const byStage = (proj?.funnel||[]).map(s => ({ stage:s, count:leads.filter(l=>l.stage===s).length }));
+  const recentLeads = [...leads].sort((a,b)=>b.score-a.score).slice(0,5);
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+      <div>
+        <div style={{ fontSize:11, color:proj?.color||C.accent, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:4, fontWeight:700 }}>{proj?.icon} {proj?.name}</div>
+        <h1 style={{ fontSize:28, fontWeight:900, color:C.text, margin:"0 0 4px", letterSpacing:"-0.03em" }}>Visão Geral</h1>
+        <p style={{ fontSize:13, color:C.textSub, margin:0 }}>{proj?.desc || "Estatísticas do projeto"}</p>
+      </div>
+
+      {/* KPIs */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12 }}>
+        {[
+          { l:"Total de leads", v:total, c:C.accent, icon:"👥" },
+          { l:"Score alto (≥70)", v:hot, c:"#f0a500", icon:"🔥" },
+          { l:"Score médio", v:avg, c:C.green, icon:"📊" },
+          { l:"Fechados", v:closed, c:"#7c5cfc", icon:"✅" },
+        ].map(s => (
+          <div key={s.l} style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:"18px 20px", boxShadow:C.shadowCard }}>
+            <div style={{ fontSize:20, marginBottom:8 }}>{s.icon}</div>
+            <div style={{ fontSize:11, color:C.textSub, letterSpacing:"0.07em", textTransform:"uppercase", marginBottom:6, fontWeight:600 }}>{s.l}</div>
+            <div style={{ fontSize:30, fontWeight:900, color:s.c, lineHeight:1 }}>{s.v}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+        {/* Funil */}
+        <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:20, boxShadow:C.shadowCard }}>
+          <div style={{ fontSize:12, fontWeight:700, color:C.textSub, textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:14 }}>Funil de Vendas</div>
+          {byStage.map(({ stage, count }) => {
+            const pct = total ? Math.round(count/total*100) : 0;
+            return (
+              <div key={stage} style={{ marginBottom:10 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+                  <span style={{ fontSize:12, color:C.textMid, textTransform:"capitalize" }}>{stage}</span>
+                  <span style={{ fontSize:12, fontWeight:700, color:C.text }}>{count}</span>
+                </div>
+                <div style={{ height:6, background:C.muted, borderRadius:99 }}>
+                  <div style={{ height:6, width:`${pct}%`, background:proj?.color||C.accent, borderRadius:99, transition:"width 0.4s" }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Top leads */}
+        <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:20, boxShadow:C.shadowCard }}>
+          <div style={{ fontSize:12, fontWeight:700, color:C.textSub, textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:14 }}>Top Leads por Score</div>
+          {recentLeads.length === 0 && <div style={{ fontSize:13, color:C.textSub, textAlign:"center", padding:"20px 0" }}>Nenhum lead ainda</div>}
+          {recentLeads.map(l => (
+            <div key={l.id} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
+              <div style={{ width:34, height:34, borderRadius:9, background:`${proj?.color||C.accent}18`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:800, color:proj?.color||C.accent, flexShrink:0 }}>{l.name?.[0]?.toUpperCase()||"?"}</div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:13, fontWeight:700, color:C.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{l.name}</div>
+                <div style={{ fontSize:11, color:C.textSub }}>{l.stage} · {l.company||l.email}</div>
+              </div>
+              <div style={{ fontSize:13, fontWeight:800, color:l.score>=70?"#f0a500":C.textMid, flexShrink:0 }}>{l.score}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Info rápida */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12 }}>
+        {[
+          { l:"Formulários", v:proj?.forms?.length||0, sub:"captura ativa" },
+          { l:"Landing Pages", v:proj?.pages?.length||0, sub:`${proj?.pages?.filter((p:any)=>p.published)?.length||0} publicadas` },
+          { l:"Assinantes", v:nlSubs, sub:"na newsletter" },
+        ].map(s => (
+          <div key={s.l} style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, padding:"16px 18px", boxShadow:C.shadowCard, display:"flex", gap:12, alignItems:"center" }}>
+            <div>
+              <div style={{ fontSize:11, color:C.textSub, marginBottom:4, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.06em" }}>{s.l}</div>
+              <div style={{ fontSize:22, fontWeight:900, color:C.text }}>{s.v}</div>
+              <div style={{ fontSize:11, color:C.textSub }}>{s.sub}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ── Legacy global dashboard (kept for reference) ──────────────────────────────
 const GlobalDashboard = ({ projects, C }) => {
   const all = projects.flatMap(p => p.leads);
   const total = all.length, hot = all.filter(l => l.tags.includes("quente")).length;
@@ -436,7 +528,7 @@ const CRM = ({ proj, setProj, C }) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // LEADS PAGE — with import/export
 // ═══════════════════════════════════════════════════════════════════════════════
-const LeadsPage = ({ proj, setProj, C }) => {
+const LeadsPage = ({ proj, setProj, C, saveForm, saveLead }) => {
   const [q, setQ] = useState(""); const [ft, setFt] = useState("todos");
   const [showNew, setShowNew] = useState(false); const [showForm, setShowForm] = useState(null);
   const [showImport, setShowImport] = useState(false);
@@ -1500,7 +1592,7 @@ const TemplatePicker = ({ proj, onClose, onCreate, C }) => {
   );
 };
 
-const LandingPages = ({ proj, setProj, C }) => {
+const LandingPages = ({ proj, setProj, C, savePage }) => {
   const [editing, setEditing] = useState(null);
   const [showPicker, setShowPicker] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -1508,32 +1600,17 @@ const LandingPages = ({ proj, setProj, C }) => {
   const slug = t => t.toLowerCase().replace(/\s+/g,"-").replace(/[^a-z0-9-]/g,"");
 
   // Salvar no banco e no estado local
-  const savePage = async (u: any) => {
+  const savePageLocal = async (u: any) => {
     setSaving(true);
     try {
-      const res = await fetch("/api/pages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: u.dbId || undefined,
-          project_id: proj.id,
-          title: u.title,
-          slug: u.title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g,"-").replace(/[^a-z0-9-]/g,""),
-          blocks: u.blocks,
-          published: u.published,
-        }),
-      });
-      if (res.ok) {
-        const { page } = await res.json();
-        const updated = { ...u, dbId: page.id };
-        setProj((p: any) => ({ ...p, pages: (p.pages||[]).map((pg: any) => pg.id===u.id ? updated : pg) }));
-        setSaving(false);
-        return updated;
-      }
+      const dbId = await savePage(u, proj.dbId || proj.id);
+      const updated = dbId ? { ...u, dbId } : u;
+      setProj((p: any) => ({ ...p, pages: (p.pages||[]).map((pg: any) => pg.id===u.id ? updated : pg) }));
+      setSaving(false);
+      return updated;
     } catch (e) {
       console.error("Erro ao salvar página:", e);
     }
-    // Fallback: salvar só no estado local
     setProj((p: any) => ({ ...p, pages: (p.pages||[]).map((pg: any) => pg.id===u.id?u:pg) }));
     setSaving(false);
     return u;
@@ -1570,7 +1647,7 @@ const LandingPages = ({ proj, setProj, C }) => {
   };
 
   if (editing) return <Builder page={editing} proj={proj} C={C} saving={saving}
-    onSave={async (pg: any)=>{ const updated = await savePage(pg); setEditing(updated); }}
+    onSave={async (pg: any)=>{ const updated = await savePageLocal(pg); setEditing(updated); }}
     onClose={()=>setEditing(null)}/>;
 
   return (
@@ -2063,7 +2140,8 @@ export default function CRMApp({ userEmail, userName, userId }: CRMAppProps) {
     { id:"team", label:"Equipe", icon:"user" },
   ];
   const NAV_PROJ = [
-    { id:"crm", label:"Funil de Vendas", icon:"crm" },
+    { id:"crm", label:"Visão Geral", icon:"grid" },
+    { id:"kanban", label:"Funil de Vendas", icon:"crm" },
     { id:"leads", label:"Leads & Captura", icon:"leads" },
     { id:"email", label:"E-mail", icon:"mail" },
     { id:"scoring", label:"Lead Scoring", icon:"score" },
@@ -2072,11 +2150,12 @@ export default function CRMApp({ userEmail, userName, userId }: CRMAppProps) {
 
   const renderPage = () => {
     if (page==="team") return <TeamPage C={C} userEmail={userEmail}/>;
-    if (page==="crm") return <CRM proj={active} setProj={setActive} C={C}/>;
-    if (page==="leads") return <LeadsPage proj={active} setProj={setActive} C={C}/>;
+    if (page==="crm") return <ProjectDashboard proj={active} C={C}/>;
+    if (page==="kanban") return <CRM proj={active} setProj={setActive} C={C}/>;
+    if (page==="leads") return <LeadsPage proj={active} setProj={setActive} C={C} saveForm={saveForm} saveLead={saveLead}/>;
     if (page==="email") return <EmailPage proj={active} setProj={setActive} C={C}/>;
     if (page==="scoring") return <ScoringPage proj={active} setProj={setActive} C={C}/>;
-    if (page==="pages") return <LandingPages proj={active} setProj={setActive} C={C}/>;
+    if (page==="pages") return <LandingPages proj={active} setProj={setActive} C={C} savePage={savePage}/>;
   };
 
   const sidebarBg = theme==="light" ? "#ffffff" : "#070e19";
