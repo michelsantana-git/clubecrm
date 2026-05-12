@@ -15,11 +15,5 @@
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
       ]
     }
-  ],
-  "rewrites": [
-    {
-      "source": "/p/:projectId/:slug",
-      "destination": "/landing/:projectId/:slug"
-    }
   ]
 }
