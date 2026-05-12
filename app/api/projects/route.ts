@@ -10,6 +10,11 @@ function getSession() {
   catch { return null; }
 }
 
+// Verifica se é um UUID válido
+function isUUID(str: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+}
+
 export async function GET() {
   const session = getSession();
   if (!session?.user?.id) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
@@ -39,7 +44,10 @@ export async function POST(request: NextRequest) {
   };
   if (body.scoring_rules !== undefined) fields.scoring_rules = body.scoring_rules;
 
-  if (body.id) {
+  // Só usa o id se for um UUID válido
+  const hasValidId = body.id && isUUID(String(body.id));
+
+  if (hasValidId) {
     const { data, error } = await supabase
       .from("projects")
       .update(fields)
@@ -51,6 +59,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ project: data });
   }
 
+  // Criar novo projeto
   const { data, error } = await supabase
     .from("projects")
     .insert({ ...fields, owner_id: session.user.id })
@@ -65,7 +74,7 @@ export async function DELETE(request: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
-  if (!id) return NextResponse.json({ error: "id obrigatório" }, { status: 400 });
+  if (!id || !isUUID(id)) return NextResponse.json({ error: "id inválido" }, { status: 400 });
   const supabase = createClient();
   const { error } = await supabase.from("projects").delete().eq("id", id).eq("owner_id", session.user.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
