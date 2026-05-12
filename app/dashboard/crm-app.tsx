@@ -659,7 +659,10 @@ const CRM = ({ proj, setProj, C, saveLead }) => {
           <h1 style={{ fontSize:27, fontWeight:900, color:C.text, margin:0, letterSpacing:"-0.03em" }}>Funil de Vendas</h1>
           <p style={{ color:C.textSub, fontSize:13, marginTop:3 }}>Arraste cards entre etapas · clique para detalhes</p>
         </div>
-        <Btn C={C} icon="plus">Novo Lead</Btn>
+        <div style={{ display:"flex", gap:8 }}>
+          <Btn C={C} v="ghost" icon="upload" onClick={()=>setShowNewLead("import")}>Importar CSV</Btn>
+          <Btn C={C} icon="plus" onClick={()=>setShowNewLead("new")}>Novo Lead</Btn>
+        </div>
       </div>
 
       <div style={{ display:"flex", gap:10, overflowX:"auto", paddingBottom:12, minHeight:480 }}>
@@ -681,7 +684,7 @@ const CRM = ({ proj, setProj, C, saveLead }) => {
                 <div key={lead.id} draggable
                   onDragStart={() => setDragging(lead.id)}
                   onDragEnd={() => { setDragging(null); setOver(null); }}
-                  onClick={() => setSel(lead)}
+                  onClick={() => setEditLead(lead)}
                   style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:9, padding:11, cursor:"grab", opacity:dragging===lead.id?0.4:1, display:"flex", flexDirection:"column", gap:8, boxShadow:C.shadowCard }}>
                   <div style={{ display:"flex", justifyContent:"space-between" }}>
                     <div style={{ fontSize:13, fontWeight:700, color:C.text }}>{lead.name}</div>
