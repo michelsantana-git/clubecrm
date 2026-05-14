@@ -597,46 +597,128 @@ const CRM = ({ proj, setProj, C, saveLead }) => {
   // Modal de edição de lead no kanban
   const KanbanLeadModal = () => {
     const l = editLead;
+    const [tab, setTab] = useState("view");
     const [ldata, setLdata] = useState({...l});
-    const [tagInput, setTagInput] = useState(l.tags?.join(", ")||"");
+    const [tagInput, setTagInput] = useState((l.tags||[]).join(", "));
+    const [saving, setSaving] = useState(false);
+    const [confirmDel, setConfirmDel] = useState(false);
+    const scoreColor = ldata.score >= 70 ? "#f0a500" : ldata.score >= 40 ? C.accent : C.textSub;
+    const InfoRow = ({label, value}) => {
+      if (!value || value === "") return null;
+      return (
+        <div style={{display:"flex",gap:8,padding:"8px 0",borderBottom:`1px solid ${C.border}`}}>
+          <span style={{fontSize:11,color:C.textSub,fontWeight:600,minWidth:110,textTransform:"uppercase",letterSpacing:"0.06em"}}>{label}</span>
+          <span style={{fontSize:13,color:C.text,flex:1,wordBreak:"break-word"}}>{value}</span>
+        </div>
+      );
+    };
     return (
-      <Modal title="Editar Lead" onClose={()=>setEditLead(null)} C={C}>
-        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-          <Inp C={C} label="Nome *" value={ldata.name||""} onChange={(e:any)=>setLdata((p:any)=>({...p,name:e.target.value}))} />
-          <Inp C={C} label="E-mail" value={ldata.email||""} onChange={(e:any)=>setLdata((p:any)=>({...p,email:e.target.value}))} />
-          <Inp C={C} label="Telefone / WhatsApp" value={ldata.phone||""} onChange={(e:any)=>setLdata((p:any)=>({...p,phone:e.target.value}))} />
-          <Inp C={C} label="Empresa" value={ldata.company||""} onChange={(e:any)=>setLdata((p:any)=>({...p,company:e.target.value}))} />
-          <Inp C={C} label="Tags (separadas por vírgula)" value={tagInput} onChange={(e:any)=>setTagInput(e.target.value)} />
-          <div style={{ display:"flex", gap:8 }}>
-            <div style={{ flex:1 }}>
-              <label style={{ fontSize:11, color:C.textSub, display:"block", marginBottom:5 }}>Etapa</label>
-              <select value={ldata.stage} onChange={e=>setLdata((p:any)=>({...p,stage:e.target.value}))}
-                style={{ width:"100%", background:C.muted, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"8px 10px", fontSize:13, fontFamily:"inherit", outline:"none" }}>
-                {proj.funnel.map((s:string)=><option key={s} value={s}>{s}</option>)}
-              </select>
+      <div style={{position:"fixed",inset:0,background:"#00000070",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
+        onClick={e=>{if(e.target===e.currentTarget)setEditLead(null);}}>
+        <div style={{background:C.surface,borderRadius:18,width:"100%",maxWidth:560,maxHeight:"90vh",overflow:"hidden",display:"flex",flexDirection:"column",boxShadow:"0 24px 80px #0008"}}>
+          <div style={{padding:"20px 24px 0",borderBottom:`1px solid ${C.border}`}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
+              <div style={{display:"flex",gap:12,alignItems:"center"}}>
+                <div style={{width:44,height:44,borderRadius:12,background:`${proj.color}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:900,color:proj.color,flexShrink:0}}>
+                  {(l.name||"?")[0].toUpperCase()}
+                </div>
+                <div>
+                  <div style={{fontSize:16,fontWeight:800,color:C.text}}>{l.name}</div>
+                  <div style={{fontSize:12,color:C.textSub}}>{l.company||l.email}</div>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                <div style={{fontSize:22,fontWeight:900,color:scoreColor}}>{l.score}</div>
+                <button onClick={()=>setEditLead(null)} style={{background:"transparent",border:"none",color:C.textSub,cursor:"pointer",fontSize:22,lineHeight:1}}>×</button>
+              </div>
             </div>
-            <div style={{ flex:1 }}>
-              <label style={{ fontSize:11, color:C.textSub, display:"block", marginBottom:5 }}>Score (0-100)</label>
-              <input type="number" min={0} max={100} value={ldata.score||0} onChange={e=>setLdata((p:any)=>({...p,score:parseInt(e.target.value)||0}))}
-                style={{ width:"100%", background:C.muted, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"8px 10px", fontSize:13, fontFamily:"inherit", outline:"none", boxSizing:"border-box" as const }} />
+            <div style={{display:"flex"}}>
+              {["view","edit"].map(t=>(
+                <button key={t} onClick={()=>setTab(t)}
+                  style={{padding:"8px 18px",fontSize:12,fontWeight:700,border:"none",background:"transparent",cursor:"pointer",borderBottom:`2px solid ${tab===t?proj.color:"transparent"}`,color:tab===t?proj.color:C.textSub,fontFamily:"inherit"}}>
+                  {t==="view"?"Visualizar":"Editar"}
+                </button>
+              ))}
             </div>
           </div>
-          <div style={{ display:"flex", gap:8 }}>
-            <Btn C={C} sx={{ flex:1, justifyContent:"center" }} onClick={async()=>{
-              const tags = tagInput.split(",").map((t:string)=>t.trim()).filter(Boolean);
-              const updated = {...ldata, tags};
-              if(saveLead) await saveLead({...updated, dbId: l.dbId||l.id}, proj.dbId||proj.id);
-              setProj((p:any)=>({...p, leads: p.leads.map((ld:any)=>ld.id===l.id?updated:ld)}));
-              setEditLead(null);
-            }}>Salvar</Btn>
-            <button onClick={async()=>{
-              if(l.dbId||l.id) { try { await fetch(`/api/leads?id=${l.dbId||l.id}`,{method:"DELETE"}); } catch {} }
-              setProj((p:any)=>({...p,leads:p.leads.filter((ld:any)=>ld.id!==l.id)}));
-              setEditLead(null);
-            }} style={{ background:"transparent", border:`1px solid ${C.red}40`, color:C.red, borderRadius:8, padding:"0 16px", fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>Excluir</button>
+          <div style={{flex:1,overflowY:"auto",padding:"20px 24px"}}>
+            {tab==="view"?(
+              <div>
+                {(l.tags||[]).length>0&&(
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:16}}>
+                    {l.tags.map((t,i)=><span key={i} style={{fontSize:11,padding:"3px 10px",borderRadius:99,background:`${proj.color}18`,color:proj.color,fontWeight:700}}>{t}</span>)}
+                  </div>
+                )}
+                <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+                  <span style={{fontSize:11,padding:"4px 12px",borderRadius:99,background:`${proj.color}18`,color:proj.color,fontWeight:700,textTransform:"capitalize"}}>{l.stage}</span>
+                  <span style={{fontSize:11,color:C.textSub}}>Origem: {l.source||"Manual"}</span>
+                  {l.date&&<span style={{fontSize:11,color:C.textSub}}>• {l.date}</span>}
+                </div>
+                <InfoRow label="E-mail" value={l.email}/>
+                <InfoRow label="Telefone" value={l.phone}/>
+                <InfoRow label="Empresa" value={l.company}/>
+                <InfoRow label="Score" value={l.score+"/100"}/>
+                {l.notes&&(
+                  <div style={{marginTop:16}}>
+                    <div style={{fontSize:11,color:C.textSub,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>Informações adicionais</div>
+                    <div style={{background:C.muted,borderRadius:8,padding:"10px 14px",fontSize:12,color:C.textMid,lineHeight:1.7}}>
+                      {l.notes.split(" | ").map((line,i)=><div key={i}>{line}</div>)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ):(
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                <Inp C={C} label="Nome *" value={ldata.name||""} onChange={e=>setLdata(p=>({...p,name:e.target.value}))}/>
+                <Inp C={C} label="E-mail" value={ldata.email||""} onChange={e=>setLdata(p=>({...p,email:e.target.value}))}/>
+                <Inp C={C} label="Telefone / WhatsApp" value={ldata.phone||""} onChange={e=>setLdata(p=>({...p,phone:e.target.value}))}/>
+                <Inp C={C} label="Empresa" value={ldata.company||""} onChange={e=>setLdata(p=>({...p,company:e.target.value}))}/>
+                <Inp C={C} label="Tags (vírgula)" value={tagInput} onChange={e=>setTagInput(e.target.value)}/>
+                <div style={{display:"flex",gap:8}}>
+                  <div style={{flex:1}}>
+                    <label style={{fontSize:11,color:C.textSub,display:"block",marginBottom:5,fontWeight:600}}>Etapa</label>
+                    <select value={ldata.stage||"novo"} onChange={e=>setLdata(p=>({...p,stage:e.target.value}))}
+                      style={{width:"100%",background:C.muted,border:`1px solid ${C.border}`,borderRadius:7,color:C.text,padding:"9px 10px",fontSize:13,fontFamily:"inherit",outline:"none"}}>
+                      {proj.funnel.map(s=><option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div style={{flex:1}}>
+                    <label style={{fontSize:11,color:C.textSub,display:"block",marginBottom:5,fontWeight:600}}>Score</label>
+                    <input type="number" min={0} max={100} value={ldata.score||0} onChange={e=>setLdata(p=>({...p,score:parseInt(e.target.value)||0}))}
+                      style={{width:"100%",background:C.muted,border:`1px solid ${C.border}`,borderRadius:7,color:C.text,padding:"9px 10px",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
+                  </div>
+                </div>
+                <div>
+                  <label style={{fontSize:11,color:C.textSub,display:"block",marginBottom:5,fontWeight:600}}>Notas</label>
+                  <textarea value={ldata.notes||""} onChange={e=>setLdata(p=>({...p,notes:e.target.value}))} rows={3}
+                    placeholder="Faturamento, ramo, observações..."
+                    style={{width:"100%",background:C.muted,border:`1px solid ${C.border}`,borderRadius:7,color:C.text,padding:"9px 10px",fontSize:13,fontFamily:"inherit",outline:"none",resize:"vertical",boxSizing:"border-box"}}/>
+                </div>
+                <div style={{display:"flex",gap:8,marginTop:4}}>
+                  <button onClick={async()=>{
+                    setSaving(true);
+                    const tags=tagInput.split(",").map(t=>t.trim()).filter(Boolean);
+                    const updated={...ldata,tags};
+                    if(saveLead) await saveLead({...updated,dbId:l.dbId||l.id},proj.dbId||proj.id);
+                    setProj(p=>({...p,leads:p.leads.map(ld=>ld.id===l.id?updated:ld)}));
+                    setSaving(false);setEditLead(null);
+                  }} style={{flex:1,background:proj.color,color:"#fff",border:"none",borderRadius:9,padding:"11px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                    {saving?"Salvando...":"Salvar alterações"}
+                  </button>
+                  {!confirmDel
+                    ?<button onClick={()=>setConfirmDel(true)} style={{background:"transparent",border:`1px solid ${C.red}40`,color:C.red,borderRadius:9,padding:"0 16px",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>Excluir</button>
+                    :<button onClick={async()=>{
+                        if(l.dbId||l.id){try{await fetch("/api/leads?id="+(l.dbId||l.id),{method:"DELETE"});}catch{}}
+                        setProj(p=>({...p,leads:p.leads.filter(ld=>ld.id!==l.id)}));
+                        setEditLead(null);
+                      }} style={{background:C.red,border:"none",color:"#fff",borderRadius:9,padding:"0 16px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Confirmar</button>
+                  }
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      </Modal>
+      </div>
     );
   };
 
@@ -886,47 +968,129 @@ const LeadsPage = ({ proj, setProj, C, saveForm, saveLead }) => {
   // LeadEditor modal
   const LeadEditorModal = () => {
     const l = editLead;
-    const [ldata, setLdata] = useState({ ...l });
-    const [tagInput, setTagInput] = useState(l.tags?.join(", ") || "");
+    const [tab, setTab] = useState("view");
+    const [ldata, setLdata] = useState({...l});
+    const [tagInput, setTagInput] = useState((l.tags||[]).join(", "));
+    const [saving, setSaving] = useState(false);
+    const [confirmDel, setConfirmDel] = useState(false);
+    const scoreColor = ldata.score >= 70 ? "#f0a500" : ldata.score >= 40 ? C.accent : C.textSub;
+    const InfoRow = ({label, value}) => {
+      if (!value || value === "") return null;
+      return (
+        <div style={{display:"flex",gap:8,padding:"8px 0",borderBottom:`1px solid ${C.border}`}}>
+          <span style={{fontSize:11,color:C.textSub,fontWeight:600,minWidth:110,textTransform:"uppercase",letterSpacing:"0.06em"}}>{label}</span>
+          <span style={{fontSize:13,color:C.text,flex:1,wordBreak:"break-word"}}>{value}</span>
+        </div>
+      );
+    };
     return (
-      <Modal title="Editar Lead" onClose={()=>setEditLead(null)} C={C}>
-        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-          {allPossibleFields.filter((f:string) => leadFields.includes(f) || ["name","email"].includes(f)).map((field:string) => (
-            <Inp key={field} C={C} label={fieldLabels[field] || field} value={ldata[field] || ""} onChange={(e:any)=>setLdata((p:any)=>({...p,[field]:e.target.value}))} />
-          ))}
-          <Inp C={C} label="Tags (separadas por vírgula)" value={tagInput} onChange={(e:any)=>setTagInput(e.target.value)} placeholder="quente, empresa, vip" />
-          <div style={{ display:"flex", gap:8 }}>
-            <div style={{ flex:1 }}>
-              <label style={{ fontSize:11, color:C.textSub, display:"block", marginBottom:5 }}>Etapa</label>
-              <select value={ldata.stage} onChange={e=>setLdata((p:any)=>({...p,stage:e.target.value}))}
-                style={{ width:"100%", background:C.muted, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"8px 10px", fontSize:13, fontFamily:"inherit", outline:"none" }}>
-                {proj.funnel.map((s:string)=><option key={s} value={s}>{s}</option>)}
-              </select>
+      <div style={{position:"fixed",inset:0,background:"#00000070",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
+        onClick={e=>{if(e.target===e.currentTarget)setEditLead(null);}}>
+        <div style={{background:C.surface,borderRadius:18,width:"100%",maxWidth:560,maxHeight:"90vh",overflow:"hidden",display:"flex",flexDirection:"column",boxShadow:"0 24px 80px #0008"}}>
+          <div style={{padding:"20px 24px 0",borderBottom:`1px solid ${C.border}`}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
+              <div style={{display:"flex",gap:12,alignItems:"center"}}>
+                <div style={{width:44,height:44,borderRadius:12,background:`${proj.color}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:900,color:proj.color,flexShrink:0}}>
+                  {(l.name||"?")[0].toUpperCase()}
+                </div>
+                <div>
+                  <div style={{fontSize:16,fontWeight:800,color:C.text}}>{l.name}</div>
+                  <div style={{fontSize:12,color:C.textSub}}>{l.company||l.email}</div>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                <div style={{fontSize:22,fontWeight:900,color:scoreColor}}>{l.score}</div>
+                <button onClick={()=>setEditLead(null)} style={{background:"transparent",border:"none",color:C.textSub,cursor:"pointer",fontSize:22,lineHeight:1}}>×</button>
+              </div>
             </div>
-            <div style={{ flex:1 }}>
-              <label style={{ fontSize:11, color:C.textSub, display:"block", marginBottom:5 }}>Score (0-100)</label>
-              <input type="number" min={0} max={100} value={ldata.score} onChange={e=>setLdata((p:any)=>({...p,score:parseInt(e.target.value)||0}))}
-                style={{ width:"100%", background:C.muted, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"8px 10px", fontSize:13, fontFamily:"inherit", outline:"none", boxSizing:"border-box" }} />
+            <div style={{display:"flex"}}>
+              {["view","edit"].map(t=>(
+                <button key={t} onClick={()=>setTab(t)}
+                  style={{padding:"8px 18px",fontSize:12,fontWeight:700,border:"none",background:"transparent",cursor:"pointer",borderBottom:`2px solid ${tab===t?proj.color:"transparent"}`,color:tab===t?proj.color:C.textSub,fontFamily:"inherit"}}>
+                  {t==="view"?"Visualizar":"Editar"}
+                </button>
+              ))}
             </div>
           </div>
-          <div style={{ display:"flex", gap:8 }}>
-            <Btn C={C} sx={{ flex:1, justifyContent:"center" }} onClick={async()=>{
-              const tags = tagInput.split(",").map((t:string)=>t.trim()).filter(Boolean);
-              const updatedLead = {...ldata, tags};
-              const projectId = proj.dbId || proj.id;
-              await saveLead({...updatedLead, dbId: l.dbId||l.id}, projectId);
-              setProj((p:any)=>({...p, leads: p.leads.map((ld:any)=>ld.id===l.id?updatedLead:ld)}));
-              setEditLead(null);
-            }}>Salvar</Btn>
-            <button onClick={async()=>{
-              if(l.dbId||l.id) { try { await fetch(`/api/leads?id=${l.dbId||l.id}`,{method:"DELETE"}); } catch {} }
-              setProj((p:any)=>({...p,leads:p.leads.filter((ld:any)=>ld.id!==l.id)}));
-              setEditLead(null);
-            }}
-              style={{ background:"transparent", border:`1px solid ${C.red}40`, color:C.red, borderRadius:8, padding:"0 16px", fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>Excluir</button>
+          <div style={{flex:1,overflowY:"auto",padding:"20px 24px"}}>
+            {tab==="view"?(
+              <div>
+                {(l.tags||[]).length>0&&(
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:16}}>
+                    {l.tags.map((t,i)=><span key={i} style={{fontSize:11,padding:"3px 10px",borderRadius:99,background:`${proj.color}18`,color:proj.color,fontWeight:700}}>{t}</span>)}
+                  </div>
+                )}
+                <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+                  <span style={{fontSize:11,padding:"4px 12px",borderRadius:99,background:`${proj.color}18`,color:proj.color,fontWeight:700,textTransform:"capitalize"}}>{l.stage}</span>
+                  <span style={{fontSize:11,color:C.textSub}}>Origem: {l.source||"Manual"}</span>
+                  {l.date&&<span style={{fontSize:11,color:C.textSub}}>• {l.date}</span>}
+                </div>
+                <InfoRow label="E-mail" value={l.email}/>
+                <InfoRow label="Telefone" value={l.phone}/>
+                <InfoRow label="Empresa" value={l.company}/>
+                <InfoRow label="Score" value={l.score+"/100"}/>
+                {l.notes&&(
+                  <div style={{marginTop:16}}>
+                    <div style={{fontSize:11,color:C.textSub,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>Informações adicionais</div>
+                    <div style={{background:C.muted,borderRadius:8,padding:"10px 14px",fontSize:12,color:C.textMid,lineHeight:1.7}}>
+                      {l.notes.split(" | ").map((line,i)=><div key={i}>{line}</div>)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ):(
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                <Inp C={C} label="Nome *" value={ldata.name||""} onChange={e=>setLdata(p=>({...p,name:e.target.value}))}/>
+                <Inp C={C} label="E-mail" value={ldata.email||""} onChange={e=>setLdata(p=>({...p,email:e.target.value}))}/>
+                <Inp C={C} label="Telefone / WhatsApp" value={ldata.phone||""} onChange={e=>setLdata(p=>({...p,phone:e.target.value}))}/>
+                <Inp C={C} label="Empresa" value={ldata.company||""} onChange={e=>setLdata(p=>({...p,company:e.target.value}))}/>
+                <Inp C={C} label="Tags (vírgula)" value={tagInput} onChange={e=>setTagInput(e.target.value)}/>
+                <div style={{display:"flex",gap:8}}>
+                  <div style={{flex:1}}>
+                    <label style={{fontSize:11,color:C.textSub,display:"block",marginBottom:5,fontWeight:600}}>Etapa</label>
+                    <select value={ldata.stage||"novo"} onChange={e=>setLdata(p=>({...p,stage:e.target.value}))}
+                      style={{width:"100%",background:C.muted,border:`1px solid ${C.border}`,borderRadius:7,color:C.text,padding:"9px 10px",fontSize:13,fontFamily:"inherit",outline:"none"}}>
+                      {proj.funnel.map(s=><option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div style={{flex:1}}>
+                    <label style={{fontSize:11,color:C.textSub,display:"block",marginBottom:5,fontWeight:600}}>Score</label>
+                    <input type="number" min={0} max={100} value={ldata.score||0} onChange={e=>setLdata(p=>({...p,score:parseInt(e.target.value)||0}))}
+                      style={{width:"100%",background:C.muted,border:`1px solid ${C.border}`,borderRadius:7,color:C.text,padding:"9px 10px",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
+                  </div>
+                </div>
+                <div>
+                  <label style={{fontSize:11,color:C.textSub,display:"block",marginBottom:5,fontWeight:600}}>Notas</label>
+                  <textarea value={ldata.notes||""} onChange={e=>setLdata(p=>({...p,notes:e.target.value}))} rows={3}
+                    placeholder="Faturamento, ramo, observações..."
+                    style={{width:"100%",background:C.muted,border:`1px solid ${C.border}`,borderRadius:7,color:C.text,padding:"9px 10px",fontSize:13,fontFamily:"inherit",outline:"none",resize:"vertical",boxSizing:"border-box"}}/>
+                </div>
+                <div style={{display:"flex",gap:8,marginTop:4}}>
+                  <button onClick={async()=>{
+                    setSaving(true);
+                    const tags=tagInput.split(",").map(t=>t.trim()).filter(Boolean);
+                    const updatedLead={...ldata,tags};
+                    const projectId=proj.dbId||proj.id;
+                    await saveLead({...updatedLead,dbId:l.dbId||l.id},projectId);
+                    setProj(p=>({...p,leads:p.leads.map(ld=>ld.id===l.id?updatedLead:ld)}));
+                    setSaving(false);setEditLead(null);
+                  }} style={{flex:1,background:proj.color,color:"#fff",border:"none",borderRadius:9,padding:"11px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                    {saving?"Salvando...":"Salvar alterações"}
+                  </button>
+                  {!confirmDel
+                    ?<button onClick={()=>setConfirmDel(true)} style={{background:"transparent",border:`1px solid ${C.red}40`,color:C.red,borderRadius:9,padding:"0 16px",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>Excluir</button>
+                    :<button onClick={async()=>{
+                        if(l.dbId||l.id){try{await fetch("/api/leads?id="+(l.dbId||l.id),{method:"DELETE"});}catch{}}
+                        setProj(p=>({...p,leads:p.leads.filter(ld=>ld.id!==l.id)}));
+                        setEditLead(null);
+                      }} style={{background:C.red,border:"none",color:"#fff",borderRadius:9,padding:"0 16px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Confirmar</button>
+                  }
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      </Modal>
+      </div>
     );
   };
 
