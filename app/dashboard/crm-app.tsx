@@ -594,124 +594,141 @@ const CRM = ({ proj, setProj, C, saveLead }) => {
     if(lead && saveLead) saveLead({...lead, stage, dbId: lead.dbId||lead.id}, proj.dbId||proj.id).catch(()=>{});
   };
 
-  // Modal de edição de lead no kanban
+  // Modal completo de visualização e edição de lead
   const KanbanLeadModal = () => {
     const l = editLead;
-    const [tab, setTab] = useState("view");
+    const [tab, setTab] = useState<"view"|"edit">("view");
     const [ldata, setLdata] = useState({...l});
     const [tagInput, setTagInput] = useState((l.tags||[]).join(", "));
     const [saving, setSaving] = useState(false);
     const [confirmDel, setConfirmDel] = useState(false);
+
     const scoreColor = ldata.score >= 70 ? "#f0a500" : ldata.score >= 40 ? C.accent : C.textSub;
-    const InfoRow = ({label, value}) => {
-      if (!value || value === "") return null;
+
+    const InfoRow = ({ label, value }: { label: string; value: any }) => {
+      if (!value || value === '""' || value === "") return null;
       return (
-        <div style={{display:"flex",gap:8,padding:"8px 0",borderBottom:`1px solid ${C.border}`}}>
-          <span style={{fontSize:11,color:C.textSub,fontWeight:600,minWidth:110,textTransform:"uppercase",letterSpacing:"0.06em"}}>{label}</span>
-          <span style={{fontSize:13,color:C.text,flex:1,wordBreak:"break-word"}}>{value}</span>
+        <div style={{ display:"flex", gap:8, padding:"8px 0", borderBottom:`1px solid ${C.border}` }}>
+          <span style={{ fontSize:11, color:C.textSub, fontWeight:600, minWidth:110, textTransform:"uppercase", letterSpacing:"0.06em", paddingTop:1 }}>{label}</span>
+          <span style={{ fontSize:13, color:C.text, flex:1, wordBreak:"break-word" as const }}>{value}</span>
         </div>
       );
     };
+
     return (
-      <div style={{position:"fixed",inset:0,background:"#00000070",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
-        onClick={e=>{if(e.target===e.currentTarget)setEditLead(null);}}>
-        <div style={{background:C.surface,borderRadius:18,width:"100%",maxWidth:560,maxHeight:"90vh",overflow:"hidden",display:"flex",flexDirection:"column",boxShadow:"0 24px 80px #0008"}}>
-          <div style={{padding:"20px 24px 0",borderBottom:`1px solid ${C.border}`}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
-              <div style={{display:"flex",gap:12,alignItems:"center"}}>
-                <div style={{width:44,height:44,borderRadius:12,background:`${proj.color}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:900,color:proj.color,flexShrink:0}}>
+      <div style={{ position:"fixed", inset:0, background:"#00000070", zIndex:999, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}
+        onClick={e=>{ if(e.target===e.currentTarget) setEditLead(null); }}>
+        <div style={{ background:C.surface, borderRadius:18, width:"100%", maxWidth:560, maxHeight:"90vh", overflow:"hidden", display:"flex", flexDirection:"column", boxShadow:"0 24px 80px #0008" }}>
+          
+          {/* Header */}
+          <div style={{ padding:"20px 24px 0", borderBottom:`1px solid ${C.border}` }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16 }}>
+              <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+                <div style={{ width:44, height:44, borderRadius:12, background:`${proj.color}18`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, fontWeight:900, color:proj.color, flexShrink:0 }}>
                   {(l.name||"?")[0].toUpperCase()}
                 </div>
                 <div>
-                  <div style={{fontSize:16,fontWeight:800,color:C.text}}>{l.name}</div>
-                  <div style={{fontSize:12,color:C.textSub}}>{l.company||l.email}</div>
+                  <div style={{ fontSize:16, fontWeight:800, color:C.text }}>{l.name}</div>
+                  <div style={{ fontSize:12, color:C.textSub }}>{l.company || l.email}</div>
                 </div>
               </div>
-              <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                <div style={{fontSize:22,fontWeight:900,color:scoreColor}}>{l.score}</div>
-                <button onClick={()=>setEditLead(null)} style={{background:"transparent",border:"none",color:C.textSub,cursor:"pointer",fontSize:22,lineHeight:1}}>×</button>
+              <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                <div style={{ fontSize:22, fontWeight:900, color:scoreColor }}>{l.score}</div>
+                <button onClick={()=>setEditLead(null)} style={{ background:"transparent", border:"none", color:C.textSub, cursor:"pointer", fontSize:22, padding:"0 4px", lineHeight:1 }}>×</button>
               </div>
             </div>
-            <div style={{display:"flex"}}>
-              {["view","edit"].map(t=>(
+            {/* Tabs */}
+            <div style={{ display:"flex", gap:0 }}>
+              {(["view","edit"] as const).map(t => (
                 <button key={t} onClick={()=>setTab(t)}
-                  style={{padding:"8px 18px",fontSize:12,fontWeight:700,border:"none",background:"transparent",cursor:"pointer",borderBottom:`2px solid ${tab===t?proj.color:"transparent"}`,color:tab===t?proj.color:C.textSub,fontFamily:"inherit"}}>
+                  style={{ padding:"8px 18px", fontSize:12, fontWeight:700, border:"none", background:"transparent", cursor:"pointer", borderBottom:`2px solid ${tab===t?proj.color:"transparent"}`, color:tab===t?proj.color:C.textSub, fontFamily:"inherit" }}>
                   {t==="view"?"Visualizar":"Editar"}
                 </button>
               ))}
             </div>
           </div>
-          <div style={{flex:1,overflowY:"auto",padding:"20px 24px"}}>
-            {tab==="view"?(
+
+          {/* Body */}
+          <div style={{ flex:1, overflowY:"auto", padding:"20px 24px" }}>
+            {tab === "view" ? (
               <div>
-                {(l.tags||[]).length>0&&(
-                  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:16}}>
-                    {l.tags.map((t,i)=><span key={i} style={{fontSize:11,padding:"3px 10px",borderRadius:99,background:`${proj.color}18`,color:proj.color,fontWeight:700}}>{t}</span>)}
+                {/* Tags */}
+                {(l.tags||[]).length > 0 && (
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:16 }}>
+                    {l.tags.map((t:string) => (
+                      <span key={t} style={{ fontSize:11, padding:"3px 10px", borderRadius:99, background:`${proj.color}18`, color:proj.color, fontWeight:700 }}>{t}</span>
+                    ))}
                   </div>
                 )}
-                <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-                  <span style={{fontSize:11,padding:"4px 12px",borderRadius:99,background:`${proj.color}18`,color:proj.color,fontWeight:700,textTransform:"capitalize"}}>{l.stage}</span>
-                  <span style={{fontSize:11,color:C.textSub}}>Origem: {l.source||"Manual"}</span>
-                  {l.date&&<span style={{fontSize:11,color:C.textSub}}>• {l.date}</span>}
+                {/* Stage badge */}
+                <div style={{ display:"flex", gap:8, marginBottom:16, alignItems:"center" }}>
+                  <span style={{ fontSize:11, padding:"4px 12px", borderRadius:99, background:`${proj.color}18`, color:proj.color, fontWeight:700, textTransform:"capitalize" as const }}>{l.stage}</span>
+                  <span style={{ fontSize:11, color:C.textSub }}>Origem: {l.source||"Manual"}</span>
+                  {l.date && <span style={{ fontSize:11, color:C.textSub }}>• {l.date}</span>}
                 </div>
-                <InfoRow label="E-mail" value={l.email}/>
-                <InfoRow label="Telefone" value={l.phone}/>
-                <InfoRow label="Empresa" value={l.company}/>
-                <InfoRow label="Score" value={l.score+"/100"}/>
-                {l.notes&&(
-                  <div style={{marginTop:16}}>
-                    <div style={{fontSize:11,color:C.textSub,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>Informações adicionais</div>
-                    <div style={{background:C.muted,borderRadius:8,padding:"10px 14px",fontSize:12,color:C.textMid,lineHeight:1.7}}>
-                      {l.notes.split(" | ").map((line,i)=><div key={i}>{line}</div>)}
+                {/* Campos */}
+                <InfoRow label="E-mail" value={l.email} />
+                <InfoRow label="Telefone" value={l.phone} />
+                <InfoRow label="Empresa" value={l.company} />
+                <InfoRow label="Score" value={`${l.score}/100`} />
+                {/* Notas (campos do RD Station) */}
+                {l.notes && (
+                  <div style={{ marginTop:16 }}>
+                    <div style={{ fontSize:11, color:C.textSub, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:8 }}>Informações adicionais</div>
+                    <div style={{ background:C.muted, borderRadius:8, padding:"10px 14px", fontSize:12, color:C.textMid, lineHeight:1.7 }}>
+                      {l.notes.split(" | ").map((line:string, i:number) => (
+                        <div key={i}>{line}</div>
+                      ))}
                     </div>
                   </div>
                 )}
               </div>
-            ):(
-              <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                <Inp C={C} label="Nome *" value={ldata.name||""} onChange={e=>setLdata(p=>({...p,name:e.target.value}))}/>
-                <Inp C={C} label="E-mail" value={ldata.email||""} onChange={e=>setLdata(p=>({...p,email:e.target.value}))}/>
-                <Inp C={C} label="Telefone / WhatsApp" value={ldata.phone||""} onChange={e=>setLdata(p=>({...p,phone:e.target.value}))}/>
-                <Inp C={C} label="Empresa" value={ldata.company||""} onChange={e=>setLdata(p=>({...p,company:e.target.value}))}/>
-                <Inp C={C} label="Tags (vírgula)" value={tagInput} onChange={e=>setTagInput(e.target.value)}/>
-                <div style={{display:"flex",gap:8}}>
-                  <div style={{flex:1}}>
-                    <label style={{fontSize:11,color:C.textSub,display:"block",marginBottom:5,fontWeight:600}}>Etapa</label>
-                    <select value={ldata.stage||"novo"} onChange={e=>setLdata(p=>({...p,stage:e.target.value}))}
-                      style={{width:"100%",background:C.muted,border:`1px solid ${C.border}`,borderRadius:7,color:C.text,padding:"9px 10px",fontSize:13,fontFamily:"inherit",outline:"none"}}>
-                      {proj.funnel.map(s=><option key={s} value={s}>{s}</option>)}
+            ) : (
+              <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                <Inp C={C} label="Nome *" value={ldata.name||""} onChange={(e:any)=>setLdata((p:any)=>({...p,name:e.target.value}))} />
+                <Inp C={C} label="E-mail" value={ldata.email||""} onChange={(e:any)=>setLdata((p:any)=>({...p,email:e.target.value}))} />
+                <Inp C={C} label="Telefone / WhatsApp" value={ldata.phone||""} onChange={(e:any)=>setLdata((p:any)=>({...p,phone:e.target.value}))} />
+                <Inp C={C} label="Empresa" value={ldata.company||""} onChange={(e:any)=>setLdata((p:any)=>({...p,company:e.target.value}))} />
+                <Inp C={C} label="Tags (separadas por vírgula)" value={tagInput} onChange={(e:any)=>setTagInput(e.target.value)} placeholder="quente, vip, empresa" />
+                <div style={{ display:"flex", gap:8 }}>
+                  <div style={{ flex:1 }}>
+                    <label style={{ fontSize:11, color:C.textSub, display:"block", marginBottom:5, fontWeight:600 }}>Etapa</label>
+                    <select value={ldata.stage||"novo"} onChange={e=>setLdata((p:any)=>({...p,stage:e.target.value}))}
+                      style={{ width:"100%", background:C.muted, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"9px 10px", fontSize:13, fontFamily:"inherit", outline:"none" }}>
+                      {proj.funnel.map((s:string)=><option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
-                  <div style={{flex:1}}>
-                    <label style={{fontSize:11,color:C.textSub,display:"block",marginBottom:5,fontWeight:600}}>Score</label>
-                    <input type="number" min={0} max={100} value={ldata.score||0} onChange={e=>setLdata(p=>({...p,score:parseInt(e.target.value)||0}))}
-                      style={{width:"100%",background:C.muted,border:`1px solid ${C.border}`,borderRadius:7,color:C.text,padding:"9px 10px",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
+                  <div style={{ flex:1 }}>
+                    <label style={{ fontSize:11, color:C.textSub, display:"block", marginBottom:5, fontWeight:600 }}>Score (0-100)</label>
+                    <input type="number" min={0} max={100} value={ldata.score||0} onChange={e=>setLdata((p:any)=>({...p,score:parseInt(e.target.value)||0}))}
+                      style={{ width:"100%", background:C.muted, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"9px 10px", fontSize:13, fontFamily:"inherit", outline:"none", boxSizing:"border-box" as const }} />
                   </div>
                 </div>
                 <div>
-                  <label style={{fontSize:11,color:C.textSub,display:"block",marginBottom:5,fontWeight:600}}>Notas</label>
-                  <textarea value={ldata.notes||""} onChange={e=>setLdata(p=>({...p,notes:e.target.value}))} rows={3}
+                  <label style={{ fontSize:11, color:C.textSub, display:"block", marginBottom:5, fontWeight:600 }}>Informações adicionais / Notas</label>
+                  <textarea value={ldata.notes||""} onChange={e=>setLdata((p:any)=>({...p,notes:e.target.value}))} rows={3}
                     placeholder="Faturamento, ramo, observações..."
-                    style={{width:"100%",background:C.muted,border:`1px solid ${C.border}`,borderRadius:7,color:C.text,padding:"9px 10px",fontSize:13,fontFamily:"inherit",outline:"none",resize:"vertical",boxSizing:"border-box"}}/>
+                    style={{ width:"100%", background:C.muted, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"9px 10px", fontSize:13, fontFamily:"inherit", outline:"none", resize:"vertical" as const, boxSizing:"border-box" as const }} />
                 </div>
-                <div style={{display:"flex",gap:8,marginTop:4}}>
+                <div style={{ display:"flex", gap:8, marginTop:4 }}>
                   <button onClick={async()=>{
                     setSaving(true);
-                    const tags=tagInput.split(",").map(t=>t.trim()).filter(Boolean);
-                    const updated={...ldata,tags};
-                    if(saveLead) await saveLead({...updated,dbId:l.dbId||l.id},proj.dbId||proj.id);
-                    setProj(p=>({...p,leads:p.leads.map(ld=>ld.id===l.id?updated:ld)}));
-                    setSaving(false);setEditLead(null);
-                  }} style={{flex:1,background:proj.color,color:"#fff",border:"none",borderRadius:9,padding:"11px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                    {saving?"Salvando...":"Salvar alterações"}
+                    const tags = tagInput.split(",").map((t:string)=>t.trim()).filter(Boolean);
+                    const updated = {...ldata, tags};
+                    if(saveLead) await saveLead({...updated, dbId: l.dbId||l.id}, proj.dbId||proj.id);
+                    setProj((p:any)=>({...p, leads: p.leads.map((ld:any)=>ld.id===l.id?updated:ld)}));
+                    setSaving(false);
+                    setEditLead(null);
+                  }} style={{ flex:1, background:proj.color, color:"#fff", border:"none", borderRadius:9, padding:"11px", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", opacity:saving?0.7:1 }}>
+                    {saving ? "Salvando..." : "Salvar alterações"}
                   </button>
                   {!confirmDel
-                    ?<button onClick={()=>setConfirmDel(true)} style={{background:"transparent",border:`1px solid ${C.red}40`,color:C.red,borderRadius:9,padding:"0 16px",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>Excluir</button>
-                    :<button onClick={async()=>{
-                        if(l.dbId||l.id){try{await fetch("/api/leads?id="+(l.dbId||l.id),{method:"DELETE"});}catch{}}
-                        setProj(p=>({...p,leads:p.leads.filter(ld=>ld.id!==l.id)}));
+                    ? <button onClick={()=>setConfirmDel(true)} style={{ background:"transparent", border:`1px solid ${C.red}40`, color:C.red, borderRadius:9, padding:"0 16px", fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>Excluir</button>
+                    : <button onClick={async()=>{
+                        if(l.dbId||l.id) { try { await fetch(`/api/leads?id=${l.dbId||l.id}`,{method:"DELETE"}); } catch {} }
+                        setProj((p:any)=>({...p,leads:p.leads.filter((ld:any)=>ld.id!==l.id)}));
                         setEditLead(null);
-                      }} style={{background:C.red,border:"none",color:"#fff",borderRadius:9,padding:"0 16px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Confirmar</button>
+                      }} style={{ background:C.red, border:"none", color:"#fff", borderRadius:9, padding:"0 16px", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Confirmar</button>
                   }
                 </div>
               </div>
@@ -966,124 +983,128 @@ const LeadsPage = ({ proj, setProj, C, saveForm, saveLead }) => {
   };
 
   // LeadEditor modal
+  // Reutiliza o mesmo modal rico de leads
   const LeadEditorModal = () => {
     const l = editLead;
-    const [tab, setTab] = useState("view");
+    const [tab, setTab] = useState<"view"|"edit">("view");
     const [ldata, setLdata] = useState({...l});
     const [tagInput, setTagInput] = useState((l.tags||[]).join(", "));
     const [saving, setSaving] = useState(false);
     const [confirmDel, setConfirmDel] = useState(false);
     const scoreColor = ldata.score >= 70 ? "#f0a500" : ldata.score >= 40 ? C.accent : C.textSub;
-    const InfoRow = ({label, value}) => {
-      if (!value || value === "") return null;
+
+    const InfoRow = ({ label, value }: { label: string; value: any }) => {
+      if (!value || value === '""' || value === "") return null;
       return (
-        <div style={{display:"flex",gap:8,padding:"8px 0",borderBottom:`1px solid ${C.border}`}}>
-          <span style={{fontSize:11,color:C.textSub,fontWeight:600,minWidth:110,textTransform:"uppercase",letterSpacing:"0.06em"}}>{label}</span>
-          <span style={{fontSize:13,color:C.text,flex:1,wordBreak:"break-word"}}>{value}</span>
+        <div style={{ display:"flex", gap:8, padding:"8px 0", borderBottom:`1px solid ${C.border}` }}>
+          <span style={{ fontSize:11, color:C.textSub, fontWeight:600, minWidth:110, textTransform:"uppercase" as const, letterSpacing:"0.06em", paddingTop:1 }}>{label}</span>
+          <span style={{ fontSize:13, color:C.text, flex:1, wordBreak:"break-word" as const }}>{value}</span>
         </div>
       );
     };
+
     return (
-      <div style={{position:"fixed",inset:0,background:"#00000070",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
-        onClick={e=>{if(e.target===e.currentTarget)setEditLead(null);}}>
-        <div style={{background:C.surface,borderRadius:18,width:"100%",maxWidth:560,maxHeight:"90vh",overflow:"hidden",display:"flex",flexDirection:"column",boxShadow:"0 24px 80px #0008"}}>
-          <div style={{padding:"20px 24px 0",borderBottom:`1px solid ${C.border}`}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
-              <div style={{display:"flex",gap:12,alignItems:"center"}}>
-                <div style={{width:44,height:44,borderRadius:12,background:`${proj.color}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:900,color:proj.color,flexShrink:0}}>
+      <div style={{ position:"fixed", inset:0, background:"#00000070", zIndex:999, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}
+        onClick={e=>{ if(e.target===e.currentTarget) setEditLead(null); }}>
+        <div style={{ background:C.surface, borderRadius:18, width:"100%", maxWidth:560, maxHeight:"90vh", overflow:"hidden", display:"flex", flexDirection:"column", boxShadow:"0 24px 80px #0008" }}>
+          <div style={{ padding:"20px 24px 0", borderBottom:`1px solid ${C.border}` }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16 }}>
+              <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+                <div style={{ width:44, height:44, borderRadius:12, background:`${proj.color}18`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, fontWeight:900, color:proj.color, flexShrink:0 }}>
                   {(l.name||"?")[0].toUpperCase()}
                 </div>
                 <div>
-                  <div style={{fontSize:16,fontWeight:800,color:C.text}}>{l.name}</div>
-                  <div style={{fontSize:12,color:C.textSub}}>{l.company||l.email}</div>
+                  <div style={{ fontSize:16, fontWeight:800, color:C.text }}>{l.name}</div>
+                  <div style={{ fontSize:12, color:C.textSub }}>{l.company || l.email}</div>
                 </div>
               </div>
-              <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                <div style={{fontSize:22,fontWeight:900,color:scoreColor}}>{l.score}</div>
-                <button onClick={()=>setEditLead(null)} style={{background:"transparent",border:"none",color:C.textSub,cursor:"pointer",fontSize:22,lineHeight:1}}>×</button>
+              <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                <div style={{ fontSize:22, fontWeight:900, color:scoreColor }}>{l.score}</div>
+                <button onClick={()=>setEditLead(null)} style={{ background:"transparent", border:"none", color:C.textSub, cursor:"pointer", fontSize:22, padding:"0 4px", lineHeight:1 }}>×</button>
               </div>
             </div>
-            <div style={{display:"flex"}}>
-              {["view","edit"].map(t=>(
+            <div style={{ display:"flex", gap:0 }}>
+              {(["view","edit"] as const).map(t => (
                 <button key={t} onClick={()=>setTab(t)}
-                  style={{padding:"8px 18px",fontSize:12,fontWeight:700,border:"none",background:"transparent",cursor:"pointer",borderBottom:`2px solid ${tab===t?proj.color:"transparent"}`,color:tab===t?proj.color:C.textSub,fontFamily:"inherit"}}>
+                  style={{ padding:"8px 18px", fontSize:12, fontWeight:700, border:"none", background:"transparent", cursor:"pointer", borderBottom:`2px solid ${tab===t?proj.color:"transparent"}`, color:tab===t?proj.color:C.textSub, fontFamily:"inherit" }}>
                   {t==="view"?"Visualizar":"Editar"}
                 </button>
               ))}
             </div>
           </div>
-          <div style={{flex:1,overflowY:"auto",padding:"20px 24px"}}>
-            {tab==="view"?(
+          <div style={{ flex:1, overflowY:"auto", padding:"20px 24px" }}>
+            {tab === "view" ? (
               <div>
-                {(l.tags||[]).length>0&&(
-                  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:16}}>
-                    {l.tags.map((t,i)=><span key={i} style={{fontSize:11,padding:"3px 10px",borderRadius:99,background:`${proj.color}18`,color:proj.color,fontWeight:700}}>{t}</span>)}
+                {(l.tags||[]).length > 0 && (
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:16 }}>
+                    {l.tags.map((t:string) => <span key={t} style={{ fontSize:11, padding:"3px 10px", borderRadius:99, background:`${proj.color}18`, color:proj.color, fontWeight:700 }}>{t}</span>)}
                   </div>
                 )}
-                <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-                  <span style={{fontSize:11,padding:"4px 12px",borderRadius:99,background:`${proj.color}18`,color:proj.color,fontWeight:700,textTransform:"capitalize"}}>{l.stage}</span>
-                  <span style={{fontSize:11,color:C.textSub}}>Origem: {l.source||"Manual"}</span>
-                  {l.date&&<span style={{fontSize:11,color:C.textSub}}>• {l.date}</span>}
+                <div style={{ display:"flex", gap:8, marginBottom:16, alignItems:"center", flexWrap:"wrap" as const }}>
+                  <span style={{ fontSize:11, padding:"4px 12px", borderRadius:99, background:`${proj.color}18`, color:proj.color, fontWeight:700, textTransform:"capitalize" as const }}>{l.stage}</span>
+                  <span style={{ fontSize:11, color:C.textSub }}>Origem: {l.source||"Manual"}</span>
+                  {l.date && <span style={{ fontSize:11, color:C.textSub }}>• {l.date}</span>}
                 </div>
-                <InfoRow label="E-mail" value={l.email}/>
-                <InfoRow label="Telefone" value={l.phone}/>
-                <InfoRow label="Empresa" value={l.company}/>
-                <InfoRow label="Score" value={l.score+"/100"}/>
-                {l.notes&&(
-                  <div style={{marginTop:16}}>
-                    <div style={{fontSize:11,color:C.textSub,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>Informações adicionais</div>
-                    <div style={{background:C.muted,borderRadius:8,padding:"10px 14px",fontSize:12,color:C.textMid,lineHeight:1.7}}>
-                      {l.notes.split(" | ").map((line,i)=><div key={i}>{line}</div>)}
+                <InfoRow label="E-mail" value={l.email} />
+                <InfoRow label="Telefone" value={l.phone} />
+                <InfoRow label="Empresa" value={l.company} />
+                <InfoRow label="Score" value={`${l.score}/100`} />
+                {l.notes && (
+                  <div style={{ marginTop:16 }}>
+                    <div style={{ fontSize:11, color:C.textSub, fontWeight:600, textTransform:"uppercase" as const, letterSpacing:"0.06em", marginBottom:8 }}>Informações adicionais</div>
+                    <div style={{ background:C.muted, borderRadius:8, padding:"10px 14px", fontSize:12, color:C.textMid, lineHeight:1.7 }}>
+                      {l.notes.split(" | ").map((line:string, i:number) => <div key={i}>{line}</div>)}
                     </div>
                   </div>
                 )}
               </div>
-            ):(
-              <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                <Inp C={C} label="Nome *" value={ldata.name||""} onChange={e=>setLdata(p=>({...p,name:e.target.value}))}/>
-                <Inp C={C} label="E-mail" value={ldata.email||""} onChange={e=>setLdata(p=>({...p,email:e.target.value}))}/>
-                <Inp C={C} label="Telefone / WhatsApp" value={ldata.phone||""} onChange={e=>setLdata(p=>({...p,phone:e.target.value}))}/>
-                <Inp C={C} label="Empresa" value={ldata.company||""} onChange={e=>setLdata(p=>({...p,company:e.target.value}))}/>
-                <Inp C={C} label="Tags (vírgula)" value={tagInput} onChange={e=>setTagInput(e.target.value)}/>
-                <div style={{display:"flex",gap:8}}>
-                  <div style={{flex:1}}>
-                    <label style={{fontSize:11,color:C.textSub,display:"block",marginBottom:5,fontWeight:600}}>Etapa</label>
-                    <select value={ldata.stage||"novo"} onChange={e=>setLdata(p=>({...p,stage:e.target.value}))}
-                      style={{width:"100%",background:C.muted,border:`1px solid ${C.border}`,borderRadius:7,color:C.text,padding:"9px 10px",fontSize:13,fontFamily:"inherit",outline:"none"}}>
-                      {proj.funnel.map(s=><option key={s} value={s}>{s}</option>)}
+            ) : (
+              <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                <Inp C={C} label="Nome *" value={ldata.name||""} onChange={(e:any)=>setLdata((p:any)=>({...p,name:e.target.value}))} />
+                <Inp C={C} label="E-mail" value={ldata.email||""} onChange={(e:any)=>setLdata((p:any)=>({...p,email:e.target.value}))} />
+                <Inp C={C} label="Telefone / WhatsApp" value={ldata.phone||""} onChange={(e:any)=>setLdata((p:any)=>({...p,phone:e.target.value}))} />
+                <Inp C={C} label="Empresa" value={ldata.company||""} onChange={(e:any)=>setLdata((p:any)=>({...p,company:e.target.value}))} />
+                <Inp C={C} label="Tags (separadas por vírgula)" value={tagInput} onChange={(e:any)=>setTagInput(e.target.value)} placeholder="quente, vip, empresa" />
+                <div style={{ display:"flex", gap:8 }}>
+                  <div style={{ flex:1 }}>
+                    <label style={{ fontSize:11, color:C.textSub, display:"block", marginBottom:5, fontWeight:600 }}>Etapa</label>
+                    <select value={ldata.stage||"novo"} onChange={e=>setLdata((p:any)=>({...p,stage:e.target.value}))}
+                      style={{ width:"100%", background:C.muted, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"9px 10px", fontSize:13, fontFamily:"inherit", outline:"none" }}>
+                      {proj.funnel.map((s:string)=><option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
-                  <div style={{flex:1}}>
-                    <label style={{fontSize:11,color:C.textSub,display:"block",marginBottom:5,fontWeight:600}}>Score</label>
-                    <input type="number" min={0} max={100} value={ldata.score||0} onChange={e=>setLdata(p=>({...p,score:parseInt(e.target.value)||0}))}
-                      style={{width:"100%",background:C.muted,border:`1px solid ${C.border}`,borderRadius:7,color:C.text,padding:"9px 10px",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
+                  <div style={{ flex:1 }}>
+                    <label style={{ fontSize:11, color:C.textSub, display:"block", marginBottom:5, fontWeight:600 }}>Score (0-100)</label>
+                    <input type="number" min={0} max={100} value={ldata.score||0} onChange={e=>setLdata((p:any)=>({...p,score:parseInt(e.target.value)||0}))}
+                      style={{ width:"100%", background:C.muted, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"9px 10px", fontSize:13, fontFamily:"inherit", outline:"none", boxSizing:"border-box" as const }} />
                   </div>
                 </div>
                 <div>
-                  <label style={{fontSize:11,color:C.textSub,display:"block",marginBottom:5,fontWeight:600}}>Notas</label>
-                  <textarea value={ldata.notes||""} onChange={e=>setLdata(p=>({...p,notes:e.target.value}))} rows={3}
+                  <label style={{ fontSize:11, color:C.textSub, display:"block", marginBottom:5, fontWeight:600 }}>Informações adicionais / Notas</label>
+                  <textarea value={ldata.notes||""} onChange={e=>setLdata((p:any)=>({...p,notes:e.target.value}))} rows={3}
                     placeholder="Faturamento, ramo, observações..."
-                    style={{width:"100%",background:C.muted,border:`1px solid ${C.border}`,borderRadius:7,color:C.text,padding:"9px 10px",fontSize:13,fontFamily:"inherit",outline:"none",resize:"vertical",boxSizing:"border-box"}}/>
+                    style={{ width:"100%", background:C.muted, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"9px 10px", fontSize:13, fontFamily:"inherit", outline:"none", resize:"vertical" as const, boxSizing:"border-box" as const }} />
                 </div>
-                <div style={{display:"flex",gap:8,marginTop:4}}>
+                <div style={{ display:"flex", gap:8, marginTop:4 }}>
                   <button onClick={async()=>{
                     setSaving(true);
-                    const tags=tagInput.split(",").map(t=>t.trim()).filter(Boolean);
-                    const updatedLead={...ldata,tags};
-                    const projectId=proj.dbId||proj.id;
-                    await saveLead({...updatedLead,dbId:l.dbId||l.id},projectId);
-                    setProj(p=>({...p,leads:p.leads.map(ld=>ld.id===l.id?updatedLead:ld)}));
-                    setSaving(false);setEditLead(null);
-                  }} style={{flex:1,background:proj.color,color:"#fff",border:"none",borderRadius:9,padding:"11px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                    {saving?"Salvando...":"Salvar alterações"}
+                    const tags = tagInput.split(",").map((t:string)=>t.trim()).filter(Boolean);
+                    const updatedLead = {...ldata, tags};
+                    const projectId = proj.dbId || proj.id;
+                    await saveLead({...updatedLead, dbId: l.dbId||l.id}, projectId);
+                    setProj((p:any)=>({...p, leads: p.leads.map((ld:any)=>ld.id===l.id?updatedLead:ld)}));
+                    setSaving(false);
+                    setEditLead(null);
+                  }} style={{ flex:1, background:proj.color, color:"#fff", border:"none", borderRadius:9, padding:"11px", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", opacity:saving?0.7:1 }}>
+                    {saving ? "Salvando..." : "Salvar alterações"}
                   </button>
                   {!confirmDel
-                    ?<button onClick={()=>setConfirmDel(true)} style={{background:"transparent",border:`1px solid ${C.red}40`,color:C.red,borderRadius:9,padding:"0 16px",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>Excluir</button>
-                    :<button onClick={async()=>{
-                        if(l.dbId||l.id){try{await fetch("/api/leads?id="+(l.dbId||l.id),{method:"DELETE"});}catch{}}
-                        setProj(p=>({...p,leads:p.leads.filter(ld=>ld.id!==l.id)}));
+                    ? <button onClick={()=>setConfirmDel(true)} style={{ background:"transparent", border:`1px solid ${C.red}40`, color:C.red, borderRadius:9, padding:"0 16px", fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>Excluir</button>
+                    : <button onClick={async()=>{
+                        if(l.dbId||l.id) { try { await fetch(`/api/leads?id=${l.dbId||l.id}`,{method:"DELETE"}); } catch {} }
+                        setProj((p:any)=>({...p,leads:p.leads.filter((ld:any)=>ld.id!==l.id)}));
                         setEditLead(null);
-                      }} style={{background:C.red,border:"none",color:"#fff",borderRadius:9,padding:"0 16px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Confirmar</button>
+                      }} style={{ background:C.red, border:"none", color:"#fff", borderRadius:9, padding:"0 16px", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Confirmar</button>
                   }
                 </div>
               </div>
@@ -1289,7 +1310,13 @@ const EmailPage = ({ proj, setProj, C }) => {
   const [testStatus, setTestStatus] = useState(null);
   const [newCampaign, setNewCampaign] = useState({ title:"", subject:"", content:"" });
 
-  const subs = proj.leads.filter(l => l.nl);
+  const [filterTag, setFilterTag] = useState("todos");
+  const allTags = ["todos", ...Array.from(new Set(proj.leads.flatMap(l => l.tags||[])))].filter(Boolean);
+  const subs = proj.leads.filter(l => {
+    if (filterTag === "todos") return l.nl;
+    return l.tags?.includes(filterTag);
+  });
+  const subsCount = proj.leads.filter(l => l.nl).length;
   const sent = proj.newsletters.filter(n => n.status==="enviado");
   const tSent = sent.reduce((a,b)=>a+b.sent,0), tOpen = sent.reduce((a,b)=>a+b.opened,0), tClick = sent.reduce((a,b)=>a+b.clicked,0);
   const or = tSent?Math.round(tOpen/tSent*100):0, cr = tOpen?Math.round(tClick/tOpen*100):0;
@@ -1341,9 +1368,22 @@ const EmailPage = ({ proj, setProj, C }) => {
         </div>
       </div>
 
+      {/* Filtro por tag */}
+      <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+        <span style={{ fontSize:12, color:C.textSub, fontWeight:600 }}>Disparar para:</span>
+        <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+          {allTags.map(tag => (
+            <button key={tag} onClick={()=>setFilterTag(tag)}
+              style={{ padding:"5px 12px", borderRadius:99, border:`1.5px solid ${filterTag===tag?proj.color:C.border}`, background:filterTag===tag?`${proj.color}18`:"transparent", color:filterTag===tag?proj.color:C.textSub, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+              {tag === "todos" ? `Inscritos (${subsCount})` : `${tag} (${proj.leads.filter(l=>l.tags?.includes(tag)).length})`}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Stats */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12 }}>
-        {[{l:"Inscritos",v:subs.length,c:C.accent},{l:"Enviados",v:tSent,c:C.textMid},{l:"Abertura",v:`${or}%`,c:C.green},{l:"Clique",v:`${cr}%`,c:C.amber}].map(s => (
+        {[{l:"Selecionados",v:subs.length,c:C.accent},{l:"Enviados",v:tSent,c:C.textMid},{l:"Abertura",v:`${or}%`,c:C.green},{l:"Clique",v:`${cr}%`,c:C.amber}].map(s => (
           <div key={s.l} style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, padding:"16px 18px", boxShadow:C.shadowCard }}>
             <div style={{ fontSize:10, color:C.textSub, textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:8, fontWeight:600 }}>{s.l}</div>
             <div style={{ fontSize:26, fontWeight:900, color:s.c }}>{s.v}</div>
@@ -1868,6 +1908,10 @@ const Builder = ({ page, proj, onSave, onClose, saving, C }) => {
   const [panelTab, setPanelTab] = useState("blocks");
   const [showAdd, setShowAdd] = useState(false);
   const [pub, setPub] = useState(page.published||false);
+  const [showTracking, setShowTracking] = useState(false);
+  const [tracking, setTracking] = useState({ gtmId: page.gtmId||"", metaPixelId: page.metaPixelId||"", gaId: page.gaId||"", customHead: page.customHead||"" });
+  const [showTracking, setShowTracking] = useState(false);
+  const [trackingData, setTrackingData] = useState({ gtmId: page.gtmId||"", metaPixelId: page.metaPixelId||"", gaId: page.gaId||"", customHead: page.customHead||"" });
 
   const selBlock = blocks.find(b => b.id===sel);
   const upd = (id,f,v) => setBlocks(prev => prev.map(b => b.id===id?{...b,data:{...b.data,[f]:v}}:b));
@@ -1935,10 +1979,54 @@ const Builder = ({ page, proj, onSave, onClose, saving, C }) => {
           </div>
           <div style={{ display:"flex", gap:7, alignItems:"center" }}>
             {pub && <div style={{ display:"flex", gap:5, alignItems:"center", background:C.greenSoft, border:`1px solid ${C.green}30`, borderRadius:7, padding:"4px 11px" }}><div style={{ width:5, height:5, borderRadius:"50%", background:C.green }}/><span style={{ fontSize:11, color:C.green, fontWeight:700 }}>Publicada</span></div>}
-            <Btn C={C} v="ghost" small onClick={()=>onSave({...page,blocks,published:pub})}>{saving?"Salvando...":"Salvar rascunho"}</Btn>
-            <Btn C={C} small icon="globe" onClick={()=>{setPub(true);onSave({...page,blocks,published:true});}}>{saving?"Salvando...":"Publicar"}</Btn>
+            <Btn C={C} v="ghost" small onClick={()=>setShowTracking(t=>!t)}>🏷 Rastreio</Btn>
+            <Btn C={C} v="ghost" small onClick={()=>onSave({...page,...trackingData,blocks,published:pub})}>{saving?"Salvando...":"Salvar rascunho"}</Btn>
+            <Btn C={C} small icon="globe" onClick={()=>{setPub(true);onSave({...page,...trackingData,blocks,published:true});}}>{saving?"Salvando...":"Publicar"}</Btn>
           </div>
         </div>
+        {showTracking && (
+          <div style={{position:"fixed",inset:0,background:"#00000060",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
+            onClick={e=>{if(e.target===e.currentTarget)setShowTracking(false);}}>
+            <div style={{background:C.surface,borderRadius:16,width:"100%",maxWidth:480,padding:28,boxShadow:"0 20px 60px #0008",maxHeight:"90vh",overflowY:"auto"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+                <h3 style={{fontSize:16,fontWeight:800,color:C.text,margin:0}}>Tags de Rastreio</h3>
+                <button onClick={()=>setShowTracking(false)} style={{background:"transparent",border:"none",color:C.textSub,cursor:"pointer",fontSize:20}}>×</button>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:14}}>
+                <div>
+                  <label style={{fontSize:11,color:C.textSub,display:"block",marginBottom:6,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.07em"}}>Google Tag Manager</label>
+                  <input value={trackingData.gtmId} onChange={e=>setTrackingData(p=>({...p,gtmId:e.target.value}))}
+                    placeholder="GTM-XXXXXXX"
+                    style={{width:"100%",background:C.muted,border:`1.5px solid ${C.border}`,borderRadius:8,color:C.text,padding:"10px 12px",fontSize:13,fontFamily:"monospace",outline:"none",boxSizing:"border-box"}}/>
+                </div>
+                <div>
+                  <label style={{fontSize:11,color:C.textSub,display:"block",marginBottom:6,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.07em"}}>Meta Pixel ID</label>
+                  <input value={trackingData.metaPixelId} onChange={e=>setTrackingData(p=>({...p,metaPixelId:e.target.value}))}
+                    placeholder="1234567890123456"
+                    style={{width:"100%",background:C.muted,border:`1.5px solid ${C.border}`,borderRadius:8,color:C.text,padding:"10px 12px",fontSize:13,fontFamily:"monospace",outline:"none",boxSizing:"border-box"}}/>
+                </div>
+                <div>
+                  <label style={{fontSize:11,color:C.textSub,display:"block",marginBottom:6,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.07em"}}>Google Analytics 4</label>
+                  <input value={trackingData.gaId} onChange={e=>setTrackingData(p=>({...p,gaId:e.target.value}))}
+                    placeholder="G-XXXXXXXXXX"
+                    style={{width:"100%",background:C.muted,border:`1.5px solid ${C.border}`,borderRadius:8,color:C.text,padding:"10px 12px",fontSize:13,fontFamily:"monospace",outline:"none",boxSizing:"border-box"}}/>
+                </div>
+                <div>
+                  <label style={{fontSize:11,color:C.textSub,display:"block",marginBottom:6,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.07em"}}>Script customizado (head)</label>
+                  <textarea value={trackingData.customHead} onChange={e=>setTrackingData(p=>({...p,customHead:e.target.value}))}
+                    placeholder="<script>...</script>" rows={3}
+                    style={{width:"100%",background:C.muted,border:`1.5px solid ${C.border}`,borderRadius:8,color:C.text,padding:"10px 12px",fontSize:12,fontFamily:"monospace",outline:"none",resize:"vertical",boxSizing:"border-box"}}/>
+                </div>
+                <button onClick={()=>{ onSave({...page,...trackingData,blocks,published:pub}); setShowTracking(false); }}
+                  style={{background:proj.color,color:"#fff",border:"none",borderRadius:9,padding:"12px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                  Salvar tags de rastreio
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
         {/* Canvas with proper scroll */}
         <div style={{ flex:1, overflowY:"auto", overflowX:"hidden", background:C.bg==="#f0f4f8"?"#e4eaf2":"#020609", display:"flex", justifyContent:"center", padding:"20px 16px", minHeight:0 }}>
           <div style={{ width:mob?390:"100%", maxWidth:mob?390:860, background:C.bg, borderRadius:mob?22:12, border:`1px solid ${C.border}`, overflow:"hidden", boxShadow:mob?"0 20px 56px rgba(0,0,0,0.3)":C.shadowCard, transition:"all 0.25s ease", minHeight:400, alignSelf:"flex-start" }}>
@@ -1973,6 +2061,7 @@ const Builder = ({ page, proj, onSave, onClose, saving, C }) => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 
@@ -2018,6 +2107,7 @@ const TemplatePicker = ({ proj, onClose, onCreate, C }) => {
 const LandingPages = ({ proj, setProj, C }) => {
   const [editing, setEditing] = useState(null);
   const [showPicker, setShowPicker] = useState(false);
+  const [showTracking, setShowTracking] = useState(false);
   const [saving, setSaving] = useState(false);
   const pages = proj.pages || [];
   const slug = t => t.toLowerCase().replace(/\s+/g,"-").replace(/[^a-z0-9-]/g,"");
@@ -2146,6 +2236,47 @@ const LandingPages = ({ proj, setProj, C }) => {
         </button>
       </div>
       {showPicker && <TemplatePicker proj={proj} C={C} onClose={()=>setShowPicker(false)} onCreate={pg=>{addPage(pg);setShowPicker(false);setEditing(pg);}}/>}
+      {showTracking && editing && (
+        <div style={{position:"fixed",inset:0,background:"#00000060",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
+          onClick={e=>{if(e.target===e.currentTarget)setShowTracking(false);}}>
+          <div style={{background:C.surface,borderRadius:16,width:"100%",maxWidth:480,padding:28,boxShadow:"0 20px 60px #0008"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+              <h3 style={{fontSize:16,fontWeight:800,color:C.text,margin:0}}>Tags de Rastreio</h3>
+              <button onClick={()=>setShowTracking(false)} style={{background:"transparent",border:"none",color:C.textSub,cursor:"pointer",fontSize:20}}>×</button>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:14}}>
+              <div>
+                <label style={{fontSize:11,color:C.textSub,display:"block",marginBottom:6,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.07em"}}>Google Tag Manager (GTM ID)</label>
+                <input value={editing.gtmId||""} onChange={e=>setEditing(p=>({...p,gtmId:e.target.value}))}
+                  placeholder="GTM-XXXXXXX"
+                  style={{width:"100%",background:C.muted,border:`1.5px solid ${C.border}`,borderRadius:8,color:C.text,padding:"10px 12px",fontSize:13,fontFamily:"monospace",outline:"none",boxSizing:"border-box"}}/>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:C.textSub,display:"block",marginBottom:6,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.07em"}}>Meta Pixel ID (Facebook/Instagram)</label>
+                <input value={editing.metaPixelId||""} onChange={e=>setEditing(p=>({...p,metaPixelId:e.target.value}))}
+                  placeholder="1234567890123456"
+                  style={{width:"100%",background:C.muted,border:`1.5px solid ${C.border}`,borderRadius:8,color:C.text,padding:"10px 12px",fontSize:13,fontFamily:"monospace",outline:"none",boxSizing:"border-box"}}/>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:C.textSub,display:"block",marginBottom:6,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.07em"}}>Google Analytics 4 (Measurement ID)</label>
+                <input value={editing.gaId||""} onChange={e=>setEditing(p=>({...p,gaId:e.target.value}))}
+                  placeholder="G-XXXXXXXXXX"
+                  style={{width:"100%",background:C.muted,border:`1.5px solid ${C.border}`,borderRadius:8,color:C.text,padding:"10px 12px",fontSize:13,fontFamily:"monospace",outline:"none",boxSizing:"border-box"}}/>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:C.textSub,display:"block",marginBottom:6,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.07em"}}>Script customizado (inserido no head)</label>
+                <textarea value={editing.customHead||""} onChange={e=>setEditing(p=>({...p,customHead:e.target.value}))}
+                  placeholder="<script>...</script>" rows={3}
+                  style={{width:"100%",background:C.muted,border:`1.5px solid ${C.border}`,borderRadius:8,color:C.text,padding:"10px 12px",fontSize:12,fontFamily:"monospace",outline:"none",resize:"vertical",boxSizing:"border-box"}}/>
+              </div>
+              <button onClick={async()=>{ await savePageLocal(editing); setShowTracking(false); }}
+                style={{background:proj.color,color:"#fff",border:"none",borderRadius:9,padding:"12px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                Salvar tags de rastreio
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

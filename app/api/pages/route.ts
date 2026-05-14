@@ -34,7 +34,12 @@ export async function POST(request: NextRequest) {
     // Atualizar página existente
     const { data, error } = await supabase
       .from("landing_pages")
-      .update({ title, slug, blocks, published, updated_at: new Date().toISOString() })
+      .update({ title, slug, blocks, published, updated_at: new Date().toISOString(),
+        gtm_id: body.gtmId || null,
+        meta_pixel_id: body.metaPixelId || null,
+        ga_id: body.gaId || null,
+        custom_head: body.customHead || null,
+      })
       .eq("id", id)
       .select()
       .single();
