@@ -1910,7 +1910,6 @@ const Builder = ({ page, proj, onSave, onClose, saving, C }) => {
   const [pub, setPub] = useState(page.published||false);
   const [showTracking, setShowTracking] = useState(false);
   const [tracking, setTracking] = useState({ gtmId: page.gtmId||"", metaPixelId: page.metaPixelId||"", gaId: page.gaId||"", customHead: page.customHead||"" });
-  const [showTracking, setShowTracking] = useState(false);
   const [trackingData, setTrackingData] = useState({ gtmId: page.gtmId||"", metaPixelId: page.metaPixelId||"", gaId: page.gaId||"", customHead: page.customHead||"" });
 
   const selBlock = blocks.find(b => b.id===sel);
@@ -2025,7 +2024,6 @@ const Builder = ({ page, proj, onSave, onClose, saving, C }) => {
             </div>
           </div>
         )}
-      </div>
 
         {/* Canvas with proper scroll */}
         <div style={{ flex:1, overflowY:"auto", overflowX:"hidden", background:C.bg==="#f0f4f8"?"#e4eaf2":"#020609", display:"flex", justifyContent:"center", padding:"20px 16px", minHeight:0 }}>
@@ -2061,7 +2059,6 @@ const Builder = ({ page, proj, onSave, onClose, saving, C }) => {
         </div>
       </div>
     </div>
-    </>
   );
 };
 
