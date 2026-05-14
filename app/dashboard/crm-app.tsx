@@ -587,7 +587,7 @@ const CRM = ({ proj, setProj, C, saveLead }) => {
   const fieldLabels: Record<string,string> = { name:"Nome", email:"E-mail", phone:"Telefone / WhatsApp", company:"Empresa", website:"Website", notes:"Observações" };
 
   // Só mostra no kanban leads com tag "base de vendas"
-  const kanbanLeads = proj.leads.filter((l:any) => (l.tags||[]).includes("base de vendas"));
+  const kanbanLeads = proj.leads.filter((l:any) => (l.tags||[]).includes("base de vendas") && !(l.tags||[]).includes("membro"));
 
   const move = (lid, stage) => {
     setProj(p => ({ ...p, leads: p.leads.map(l => l.id===lid ? {...l, stage} : l) }));
@@ -1203,7 +1203,7 @@ const LeadsPage = ({ proj, setProj, C, saveForm, saveLead }) => {
           </thead>
           <tbody>
             {filtered.map((l, i) => (
-              <tr key={l.id} style={{ borderBottom:i<filtered.length-1?`1px solid ${C.border}`:"none" }}>
+              <tr key={l.id} onClick={()=>setEditLead(l)} style={{ borderBottom:i<filtered.length-1?`1px solid ${C.border}`:"none", cursor:"pointer" }}>
                 <td style={{ padding:"12px 15px" }}>
                   <div style={{ fontSize:13, fontWeight:700, color:C.text }}>{l.name}</div>
                   <div style={{ fontSize:11, color:C.textSub }}>{l.phone}</div>
