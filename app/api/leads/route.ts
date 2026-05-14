@@ -15,26 +15,25 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const body = await request.json();
   const supabase = createClient();
+  const fields: any = {
+    name: body.name, email: body.email,
+    phone: body.phone || null, company: body.company || null,
+    tags: body.tags || [], score: body.score || 40,
+    stage: body.stage || "novo", source: body.source || "Manual",
+    newsletter_subscribed: body.newsletter_subscribed || false,
+    notes: body.notes || null,
+    city: body.city || null,
+    annual_revenue: body.annual_revenue || null,
+    employees: body.employees || null,
+    segment: body.segment || null,
+    updated_at: new Date().toISOString(),
+  };
   if (body.id) {
-    const { data, error } = await supabase
-      .from("leads")
-      .update({
-        name: body.name, email: body.email, phone: body.phone,
-        company: body.company, tags: body.tags, score: body.score,
-        stage: body.stage, source: body.source, notes: body.notes,
-        newsletter_subscribed: body.newsletter_subscribed,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", body.id).select().single();
+    const { data, error } = await supabase.from("leads").update(fields).eq("id", body.id).select().single();
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ lead: data });
   }
-  const { data, error } = await supabase.from("leads").insert({
-    project_id: body.project_id, name: body.name, email: body.email,
-    phone: body.phone || null, company: body.company || null,
-    tags: body.tags || [], score: body.score || 40, stage: body.stage || "novo",
-    source: body.source || "Manual", newsletter_subscribed: body.newsletter_subscribed || false,
-  }).select().single();
+  const { data, error } = await supabase.from("leads").insert({ ...fields, project_id: body.project_id }).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ lead: data });
 }
