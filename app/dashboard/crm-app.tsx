@@ -1361,18 +1361,44 @@ const EmailPage = ({ proj, setProj, C }) => {
     setNewSub({ name:"", email:"", company:"" }); setShowAddSub(false);
   };
 
-  const sendTest = () => {
+  const sendTest = async () => {
     if (!testEmail) return;
     setTestStatus("sending");
-    setTimeout(() => {
-      // Simulated test — in production this calls the Resend API
-      setTestStatus(testEmail.includes("@") ? "success" : "error");
-    }, 1800);
+    try {
+      const res = await fetch("/api/newsletters/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          isTest: true, testEmail,
+          subject: newCampaign.subject || "Teste — " + proj.name,
+          content: newCampaign.content || "Este é um e-mail de teste do ClubeCRM.",
+          projectName: proj.name,
+        }),
+      });
+      setTestStatus(res.ok ? "success" : "error");
+    } catch { setTestStatus("error"); }
   };
 
-  const saveCampaign = (status) => {
+  const saveCampaign = async (status: string) => {
     if (!newCampaign.title || !newCampaign.subject) return;
-    setProj(p => ({ ...p, newsletters: [{ id: Date.now(), ...newCampaign, status, sent:0, opened:0, clicked:0, date:new Date().toISOString().slice(0,10) }, ...p.newsletters] }));
+    let sentCount = 0;
+    if (status === "enviado") {
+      const recipients = subs.map((l:any) => l.email).filter(Boolean);
+      if (recipients.length === 0) { alert("Nenhum destinatário selecionado."); return; }
+      if (!window.confirm(`Enviar "${newCampaign.subject}" para ${recipients.length} destinatários?`)) return;
+      try {
+        const res = await fetch("/api/newsletters/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ subject: newCampaign.subject, content: newCampaign.content, recipients, projectName: proj.name }),
+        });
+        const data = await res.json();
+        if (!res.ok) { alert("Erro: " + (data.error || "Erro desconhecido")); return; }
+        sentCount = data.sent || recipients.length;
+        alert("✓ E-mail enviado para " + sentCount + " destinatários!");
+      } catch { alert("Erro de conexão."); return; }
+    }
+    setProj((p:any) => ({ ...p, newsletters: [{ id: Date.now(), ...newCampaign, status, sent:sentCount, opened:0, clicked:0, date:new Date().toISOString().slice(0,10) }, ...p.newsletters] }));
     setNewCampaign({ title:"", subject:"", content:"" }); setShowNew(false);
   };
 
