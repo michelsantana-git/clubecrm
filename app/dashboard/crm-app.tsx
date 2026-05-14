@@ -1069,7 +1069,7 @@ const LeadsPage = ({ proj, setProj, C, saveForm, saveLead }) => {
                 </div>
                 <InfoRow label="E-mail" value={l.email} />
                 <InfoRow label="Telefone" value={l.phone} />
-                                <InfoRow label="Empresa" value={l.company} />
+                <InfoRow label="Empresa" value={l.company} />
                 <InfoRow label="Score" value={`${l.score}/100`} />
                 <InfoRow label="Cidade" value={l.city} />
                 <InfoRow label="Faturamento" value={l.annual_revenue} />
@@ -1081,6 +1081,55 @@ const LeadsPage = ({ proj, setProj, C, saveForm, saveLead }) => {
                     <div style={{ background:C.muted, borderRadius:8, padding:"9px 12px", fontSize:12, color:C.textMid, lineHeight:1.6 }}>{l.notes}</div>
                   </div>
                 )}
+              </div>
+            ) : (
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                <Inp C={C} label="Nome *" value={ldata.name||""} onChange={(e:any)=>setLdata((p:any)=>({...p,name:e.target.value}))}/>
+                <Inp C={C} label="E-mail" value={ldata.email||""} onChange={(e:any)=>setLdata((p:any)=>({...p,email:e.target.value}))}/>
+                <Inp C={C} label="Telefone / WhatsApp" value={ldata.phone||""} onChange={(e:any)=>setLdata((p:any)=>({...p,phone:e.target.value}))}/>
+                <Inp C={C} label="Empresa" value={ldata.company||""} onChange={(e:any)=>setLdata((p:any)=>({...p,company:e.target.value}))}/>
+                <Inp C={C} label="Tags (vírgula)" value={tagInput} onChange={(e:any)=>setTagInput(e.target.value)}/>
+                <div style={{display:"flex",gap:8}}>
+                  <div style={{flex:1}}>
+                    <label style={{fontSize:11,color:C.textSub,display:"block",marginBottom:5,fontWeight:600}}>Cidade</label>
+                    <input value={ldata.city||""} onChange={(e:any)=>setLdata((p:any)=>({...p,city:e.target.value}))} style={{width:"100%",background:C.muted,border:`1px solid ${C.border}`,borderRadius:7,color:C.text,padding:"9px 10px",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box" as const}}/>
+                  </div>
+                  <div style={{flex:1}}>
+                    <label style={{fontSize:11,color:C.textSub,display:"block",marginBottom:5,fontWeight:600}}>Faturamento anual</label>
+                    <input value={ldata.annual_revenue||""} onChange={(e:any)=>setLdata((p:any)=>({...p,annual_revenue:e.target.value}))} style={{width:"100%",background:C.muted,border:`1px solid ${C.border}`,borderRadius:7,color:C.text,padding:"9px 10px",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box" as const}}/>
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <div style={{flex:1}}>
+                    <label style={{fontSize:11,color:C.textSub,display:"block",marginBottom:5,fontWeight:600}}>Funcionários</label>
+                    <input value={ldata.employees||""} onChange={(e:any)=>setLdata((p:any)=>({...p,employees:e.target.value}))} style={{width:"100%",background:C.muted,border:`1px solid ${C.border}`,borderRadius:7,color:C.text,padding:"9px 10px",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box" as const}}/>
+                  </div>
+                  <div style={{flex:1}}>
+                    <label style={{fontSize:11,color:C.textSub,display:"block",marginBottom:5,fontWeight:600}}>Ramo / Segmento</label>
+                    <input value={ldata.segment||""} onChange={(e:any)=>setLdata((p:any)=>({...p,segment:e.target.value}))} style={{width:"100%",background:C.muted,border:`1px solid ${C.border}`,borderRadius:7,color:C.text,padding:"9px 10px",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box" as const}}/>
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:8,marginTop:4}}>
+                  <button onClick={async()=>{
+                    setSaving(true);
+                    const tags=tagInput.split(",").map((t:string)=>t.trim()).filter(Boolean);
+                    const updatedLead={...ldata,tags};
+                    const projectId=proj.dbId||proj.id;
+                    await saveLead({...updatedLead,dbId:l.dbId||l.id},projectId);
+                    setProj((p:any)=>({...p,leads:p.leads.map((ld:any)=>ld.id===l.id?updatedLead:ld)}));
+                    setSaving(false);setEditLead(null);
+                  }} style={{flex:1,background:proj.color,color:"#fff",border:"none",borderRadius:9,padding:"11px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                    {saving?"Salvando...":"Salvar alterações"}
+                  </button>
+                  {!confirmDel
+                    ?<button onClick={()=>setConfirmDel(true)} style={{background:"transparent",border:`1px solid ${C.red}40`,color:C.red,borderRadius:9,padding:"0 16px",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>Excluir</button>
+                    :<button onClick={async()=>{
+                        if(l.dbId||l.id){try{await fetch("/api/leads?id="+(l.dbId||l.id),{method:"DELETE"});}catch{}}
+                        setProj((p:any)=>({...p,leads:p.leads.filter((ld:any)=>ld.id!==l.id)}));
+                        setEditLead(null);
+                      }} style={{background:C.red,border:"none",color:"#fff",borderRadius:9,padding:"0 16px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Confirmar</button>
+                  }
+                </div>
               </div>
             )}
           </div>
